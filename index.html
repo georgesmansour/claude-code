@@ -59,6 +59,8 @@
     background: linear-gradient(to bottom, rgba(14,12,11,.25) 0%, rgba(14,12,11,.55) 60%, rgba(14,12,11,.88) 100%);
     z-index: 1;
   }
+  .overlay.deep    { background: linear-gradient(to bottom, rgba(14,12,11,.5) 0%, rgba(14,12,11,.75) 100%); }
+  .overlay.deepest { background: linear-gradient(to bottom, rgba(14,12,11,.6) 0%, rgba(14,12,11,.92) 100%); }
 
   /* ── BG IMAGE ── */
   .bg-img {
@@ -96,20 +98,17 @@
     color: var(--gold-light); opacity: .85;
     margin-bottom: .75rem;
   }
-
   .title {
     font-family: 'Cormorant Garamond', serif;
     font-size: clamp(2.6rem, 8vw, 3.4rem);
     font-weight: 300; line-height: 1.1;
     color: var(--white);
   }
-
   .subtitle {
     font-family: 'Cormorant Garamond', serif;
     font-size: 1.1rem; font-weight: 300; font-style: italic;
     color: var(--gold-light); margin-top: .5rem;
   }
-
   .body-text {
     font-size: .82rem; font-weight: 300; letter-spacing: .5px;
     line-height: 1.9; color: rgba(255,255,255,.75);
@@ -157,9 +156,7 @@
   @keyframes bounce { 0%,100%{ transform: translateX(-50%) translateY(0); } 50%{ transform: translateX(-50%) translateY(6px); } }
 
   /* ── COUNTDOWN ── */
-  .countdown {
-    display: flex; gap: 1.5rem; margin: 1.5rem 0;
-  }
+  .countdown { display: flex; gap: 1.5rem; margin: 1.5rem 0; }
   .cd-unit { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .cd-num {
     font-family: 'Cormorant Garamond', serif;
@@ -201,13 +198,21 @@
     backdrop-filter: blur(10px);
   }
   .gift-bank { font-family: 'Jost', sans-serif; font-size: .7rem; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: .5rem; }
-  .gift-acc { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 300; color: var(--white); letter-spacing: 2px; }
+  .gift-acc  { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 300; color: var(--white); letter-spacing: 2px; }
+  .gift-copy {
+    margin-top: .8rem;
+    background: transparent; border: .5px solid rgba(201,169,110,.4);
+    color: var(--gold-light); font-size: .62rem; letter-spacing: 2px;
+    text-transform: uppercase; padding: .4rem .8rem; border-radius: 2px;
+    cursor: pointer; font-family: 'Jost', sans-serif;
+    transition: all .25s ease;
+  }
+  .gift-copy:hover { background: rgba(201,169,110,.15); color: var(--white); }
 
   /* ── RSVP FORM ── */
   .rsvp-form { width: 100%; display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; }
   .form-group { display: flex; flex-direction: column; gap: 6px; text-align: left; }
   .form-label { font-size: .65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); }
-
   .form-input, .form-select {
     width: 100%; padding: .7rem 1rem;
     background: rgba(255,255,255,.07);
@@ -221,16 +226,6 @@
   .form-input:focus, .form-select:focus { border-color: var(--gold); }
   .form-select option { background: #1a1614; color: #fff; }
 
-  .name-row { display: flex; gap: 8px; }
-  .name-row input { flex: 1; }
-  .btn-remove {
-    padding: .7rem .8rem; background: rgba(255,255,255,.05);
-    border: .5px solid rgba(255,255,255,.15); border-radius: 4px;
-    color: rgba(255,255,255,.4); cursor: pointer; font-size: .9rem;
-    transition: all .2s;
-  }
-  .btn-remove:hover { background: rgba(220,50,50,.15); border-color: rgba(220,50,50,.3); color: #f88; }
-
   .btn-submit {
     margin-top: .5rem; padding: 1rem;
     background: linear-gradient(135deg, var(--gold-dark), var(--gold));
@@ -241,7 +236,6 @@
     cursor: pointer; transition: opacity .25s;
   }
   .btn-submit:hover { opacity: .85; }
-  .btn-submit:disabled { opacity: .5; cursor: default; }
 
   .success-msg {
     display: none; text-align: center; padding: 2rem;
@@ -250,70 +244,6 @@
     font-style: italic; font-weight: 300;
   }
 
-  /* ── ADMIN PANEL ── */
-  #admin-toggle {
-    position: fixed; bottom: 12px; left: 12px; z-index: 9999;
-    background: rgba(14,12,11,.7); border: .5px solid rgba(201,169,110,.4);
-    color: var(--gold); font-size: .6rem; letter-spacing: 2px;
-    text-transform: uppercase; padding: 6px 12px; border-radius: 2px;
-    cursor: pointer; backdrop-filter: blur(8px);
-  }
-
-  #admin-panel {
-    position: fixed; inset: 0; z-index: 10000;
-    background: rgba(14,12,11,.95); backdrop-filter: blur(20px);
-    display: none; flex-direction: column;
-    overflow-y: auto; padding: 2rem;
-    font-family: 'Jost', sans-serif; color: var(--white);
-  }
-  #admin-panel.open { display: flex; }
-
-  .admin-title { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 300; color: var(--gold); margin-bottom: 1.5rem; }
-  .admin-section { margin-bottom: 2rem; }
-  .admin-section h3 { font-size: .7rem; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: .5px solid rgba(201,169,110,.2); }
-
-  .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .admin-field { display: flex; flex-direction: column; gap: 6px; }
-  .admin-field label { font-size: .65rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.5); }
-  .admin-field input, .admin-field textarea, .admin-field select {
-    padding: .6rem .9rem; background: rgba(255,255,255,.06);
-    border: .5px solid rgba(255,255,255,.15); border-radius: 4px;
-    color: var(--white); font-family: 'Jost', sans-serif; font-size: .85rem;
-    outline: none; resize: vertical;
-  }
-  .admin-field input:focus, .admin-field textarea:focus { border-color: var(--gold); }
-  .admin-field.full { grid-column: 1 / -1; }
-
-  .btn-admin-save {
-    padding: .85rem 2rem; background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-    border: none; border-radius: 4px; color: var(--dark);
-    font-family: 'Jost', sans-serif; font-size: .75rem; font-weight: 500;
-    letter-spacing: 3px; text-transform: uppercase; cursor: pointer;
-    margin-right: 12px;
-  }
-  .btn-admin-close {
-    padding: .85rem 2rem; background: transparent;
-    border: .5px solid rgba(255,255,255,.2); border-radius: 4px; color: rgba(255,255,255,.6);
-    font-family: 'Jost', sans-serif; font-size: .75rem; letter-spacing: 3px;
-    text-transform: uppercase; cursor: pointer;
-  }
-
-  .img-preview {
-    width: 100%; height: 120px; object-fit: cover;
-    border-radius: 4px; margin-top: 6px;
-    border: .5px solid rgba(255,255,255,.1);
-    display: none;
-  }
-
-  .np-badge {
-    position: absolute; top: 20px; left: 20px; z-index: 10;
-    background: rgba(201,169,110,.15); border: .5px solid rgba(201,169,110,.4);
-    color: var(--gold-light); font-size: .65rem; letter-spacing: 2px;
-    text-transform: uppercase; padding: 4px 10px; border-radius: 2px;
-    backdrop-filter: blur(8px);
-  }
-
-  /* scrollable page content */
   .page-scroll { overflow-y: auto; max-height: 100%; width: 100%; }
   .page-scroll::-webkit-scrollbar { width: 0; }
 </style>
@@ -322,297 +252,394 @@
 
 <div id="app">
   <div class="card-wrap" id="cardWrap">
-
-    <!-- NAV DOTS -->
     <div id="dots"></div>
-
-    <!-- ══════════════ PAGE 1: COVER ══════════════ -->
-    <div class="page active" id="page-0">
-      <div class="bg-img" id="bg0" style="background-image: url('https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800&q=80')"></div>
-      <div class="overlay"></div>
-      <div class="page-content">
-        <p class="label" id="p1-event-label">Wedding</p>
-        <div class="divider"><span class="divider-icon">✦ ✦ ✦</span></div>
-        <h1 class="title" id="p1-names">Fadi<br>&amp;<br>Mavie</h1>
-        <p class="subtitle" id="p1-tagline">Are getting married</p>
-        <div class="divider"><span class="divider-icon">✦ ✦ ✦</span></div>
-        <p class="body-text" id="p1-host-text">With heartfelt joy,<br><strong style="color:rgba(255,255,255,.9)">Chebly and Madi Families</strong><br>invite you to celebrate</p>
-        <button class="btn-start" onclick="goTo(1)">Open Invitation</button>
-      </div>
-      <div class="swipe-hint">
-        <span>Swipe up</span>
-        <div class="swipe-arrow"></div>
-      </div>
-    </div>
-
-    <!-- ══════════════ PAGE 2: DATE & COUNTDOWN ══════════════ -->
-    <div class="page below" id="page-1">
-      <div class="bg-img" id="bg1" style="background-image: url('https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80')"></div>
-      <div class="overlay"></div>
-      <div class="page-content">
-        <p class="label">Save the date</p>
-        <h2 class="title" style="font-size:2rem;" id="p2-date">Saturday, August 24, 2024</h2>
-        <div class="divider"><span class="divider-icon">✦ ✦ ✦</span></div>
-        <div class="countdown" id="countdown">
-          <div class="cd-unit"><span class="cd-num" id="cd-d">0</span><span class="cd-label">Days</span></div>
-          <div class="cd-unit"><span class="cd-num" id="cd-h">0</span><span class="cd-label">Hours</span></div>
-          <div class="cd-unit"><span class="cd-num" id="cd-m">0</span><span class="cd-label">Min</span></div>
-          <div class="cd-unit"><span class="cd-num" id="cd-s">0</span><span class="cd-label">Sec</span></div>
-        </div>
-        <div class="divider"><span class="divider-icon">✦ ✦ ✦</span></div>
-        <p class="body-text" id="p2-description">
-          Join us as we begin our forever,<br>surrounded by those we love most.<br>Your presence is the greatest gift.
-        </p>
-      </div>
-    </div>
-
-    <!-- ══════════════ PAGE 3: LOCATIONS ══════════════ -->
-    <div class="page below" id="page-2">
-      <div class="bg-img" style="background-image: url('https://images.unsplash.com/photo-1478147427282-58a87a702b70?w=800&q=80')"></div>
-      <div class="overlay" style="background:linear-gradient(to bottom, rgba(14,12,11,.5) 0%, rgba(14,12,11,.75) 100%)"></div>
-      <div class="page-content">
-        <p class="label">The Celebration</p>
-        <h2 class="title" style="font-size:1.8rem; margin-bottom:1.5rem;">Where &amp; When</h2>
-        <div class="loc-card" id="loc1-card">
-          <p class="loc-time" id="loc1-time">6:30 PM — Ceremony</p>
-          <p class="loc-name" id="loc1-name">St. Michael Church</p>
-          <p class="loc-addr" id="loc1-addr">Bikfaya, Lebanon</p>
-          <a class="btn-map" id="loc1-btn" href="#" target="_blank">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-            View on Map
-          </a>
-        </div>
-        <div class="loc-card" id="loc2-card">
-          <p class="loc-time" id="loc2-time">7:30 PM — Reception</p>
-          <p class="loc-name" id="loc2-name">Blanc De Chêne</p>
-          <p class="loc-addr" id="loc2-addr">Delb, Bikfaya, Lebanon</p>
-          <a class="btn-map" id="loc2-btn" href="#" target="_blank">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-            View on Map
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════ PAGE 4: GIFT REGISTRY ══════════════ -->
-    <div class="page below" id="page-3">
-      <div class="bg-img" style="background-image: url('https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=800&q=80')"></div>
-      <div class="overlay"></div>
-      <div class="page-content">
-        <p class="label">Gift Registry</p>
-        <h2 class="title" style="font-size:1.9rem;">With Love</h2>
-        <div class="divider"><span class="divider-icon">✦</span></div>
-        <p class="body-text" id="p4-gift-desc">
-          Your love and presence on our special day<br>is the greatest gift of all.<br>For those who wish to give more:
-        </p>
-        <div class="gift-card">
-          <p class="gift-bank" id="gift-bank">Whish Money</p>
-          <p class="gift-acc" id="gift-acc">20822391</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════ PAGE 5: RSVP ══════════════ -->
-    <div class="page below" id="page-4">
-      <div class="bg-img" style="background-image: url('https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&q=80')"></div>
-      <div class="overlay" style="background:linear-gradient(to bottom, rgba(14,12,11,.6) 0%, rgba(14,12,11,.92) 100%)"></div>
-      <div class="page-scroll">
-        <div class="page-content" style="min-height:100%;">
-          <p class="label">Be Our Guest</p>
-          <h2 class="title" style="font-size:1.9rem;">RSVP</h2>
-          <p class="body-text" style="margin-top:.5rem;" id="p5-deadline">Please reply before July 24, 2024</p>
-          <div class="rsvp-form" id="rsvpForm">
-            <div class="form-group">
-              <label class="form-label">Attendance</label>
-              <select class="form-select" id="attending">
-                <option value="">— Select —</option>
-                <option value="yes">Yes, attending</option>
-                <option value="no">Not attending</option>
-              </select>
-            </div>
-            <div class="form-group" id="attendee-section">
-              <label class="form-label">Number of attendees</label>
-              <select class="form-select" id="numAttendees" onchange="buildNameFields()">
-                <option value="">— Select —</option>
-              </select>
-            </div>
-            <div id="nameFields"></div>
-            <button class="btn-submit" id="submitBtn" onclick="submitRSVP()">Confirm RSVP</button>
-          </div>
-          <div class="success-msg" id="successMsg">
-            Thank you for your confirmation!<br>See you there ✦
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- card-wrap -->
-</div><!-- app -->
-
-<!-- ADMIN TOGGLE -->
-<button id="admin-toggle" onclick="openAdmin()">⚙ Admin</button>
-
-<!-- ADMIN PANEL -->
-<div id="admin-panel">
-  <p class="admin-title">Event Editor</p>
-
-  <div class="admin-section">
-    <h3>Page 1 — Cover</h3>
-    <div class="admin-grid">
-      <div class="admin-field"><label>Event type</label><input id="a-event-label" value="Wedding"></div>
-      <div class="admin-field"><label>Couple / Host names</label><input id="a-names" value="Fadi &amp; Mavie"></div>
-      <div class="admin-field"><label>Tagline</label><input id="a-tagline" value="Are getting married"></div>
-      <div class="admin-field"><label>Hosting families text</label><input id="a-host-text" value="Chebly and Madi Families"></div>
-      <div class="admin-field full"><label>Cover image URL</label><input id="a-img0" value="https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800&q=80" oninput="previewImg('a-img0','prev0')"></div>
-      <img class="img-preview" id="prev0">
-    </div>
-  </div>
-
-  <div class="admin-section">
-    <h3>Page 2 — Date &amp; Details</h3>
-    <div class="admin-grid">
-      <div class="admin-field"><label>Event date (YYYY-MM-DD)</label><input type="date" id="a-date" value="2024-08-24"></div>
-      <div class="admin-field full"><label>Description</label><textarea id="a-description" rows="3">Join us as we begin our forever, surrounded by those we love most. Your presence is the greatest gift.</textarea></div>
-      <div class="admin-field full"><label>Page 2 image URL</label><input id="a-img1" value="https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80" oninput="previewImg('a-img1','prev1')"></div>
-      <img class="img-preview" id="prev1">
-    </div>
-  </div>
-
-  <div class="admin-section">
-    <h3>Page 3 — Locations</h3>
-    <div class="admin-grid">
-      <div class="admin-field"><label>Location 1 — Time &amp; Type</label><input id="a-loc1-time" value="6:30 PM — Ceremony"></div>
-      <div class="admin-field"><label>Location 1 — Name</label><input id="a-loc1-name" value="St. Michael Church"></div>
-      <div class="admin-field"><label>Location 1 — Address</label><input id="a-loc1-addr" value="Bikfaya, Lebanon"></div>
-      <div class="admin-field"><label>Location 1 — Google Maps URL</label><input id="a-loc1-url" value="https://maps.app.goo.gl/LtdauNbSukzWtYPo7"></div>
-      <div class="admin-field"><label>Location 2 — Time &amp; Type</label><input id="a-loc2-time" value="7:30 PM — Reception"></div>
-      <div class="admin-field"><label>Location 2 — Name</label><input id="a-loc2-name" value="Blanc De Chêne"></div>
-      <div class="admin-field"><label>Location 2 — Address</label><input id="a-loc2-addr" value="Delb, Bikfaya, Lebanon"></div>
-      <div class="admin-field"><label>Location 2 — Google Maps URL</label><input id="a-loc2-url" value="https://maps.app.goo.gl/v8F2Rt6wQKC4EBtE7"></div>
-    </div>
-  </div>
-
-  <div class="admin-section">
-    <h3>Page 4 — Gift Registry</h3>
-    <div class="admin-grid">
-      <div class="admin-field"><label>Bank / Wallet name</label><input id="a-gift-bank" value="Whish Money"></div>
-      <div class="admin-field"><label>Account number</label><input id="a-gift-acc" value="20822391"></div>
-      <div class="admin-field full"><label>Gift description</label><textarea id="a-gift-desc" rows="2">Your love and presence on our special day is the greatest gift of all. For those who wish to give more:</textarea></div>
-    </div>
-  </div>
-
-  <div class="admin-section">
-    <h3>Page 5 — RSVP</h3>
-    <div class="admin-grid">
-      <div class="admin-field"><label>RSVP deadline text</label><input id="a-deadline" value="Please reply before July 24, 2024"></div>
-    </div>
-  </div>
-
-  <div style="display:flex; gap:12px; flex-wrap:wrap; padding-bottom:3rem;">
-    <button class="btn-admin-save" onclick="applyAdmin()">Save &amp; Apply</button>
-    <button class="btn-admin-close" onclick="closeAdmin()">Close</button>
   </div>
 </div>
 
 <script>
-// ── STATE ──────────────────────────────────────────────
-let currentPage = 0;
-const totalPages = 5;
-let eventData = {
-  eventLabel: 'Wedding',
-  names: 'Fadi & Mavie',
-  tagline: 'Are getting married',
-  hostText: 'Chebly and Madi Families',
-  images: [
-    'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800&q=80',
-    'https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80'
-  ],
-  date: '2024-08-24',
-  description: 'Join us as we begin our forever, surrounded by those we love most. Your presence is the greatest gift.',
-  loc1: { time: '6:30 PM — Ceremony', name: 'St. Michael Church', addr: 'Bikfaya, Lebanon', url: 'https://maps.app.goo.gl/LtdauNbSukzWtYPo7' },
-  loc2: { time: '7:30 PM — Reception', name: 'Blanc De Chêne', addr: 'Delb, Bikfaya, Lebanon', url: 'https://maps.app.goo.gl/v8F2Rt6wQKC4EBtE7' },
-  giftBank: 'Whish Money',
-  giftAcc: '20822391',
-  giftDesc: 'Your love and presence on our special day is the greatest gift of all. For those who wish to give more:',
-  deadline: 'Please reply before July 24, 2024',
-  maxPeople: 10
+// ── DEFAULT DATA ───────────────────────────────────────
+const DEFAULT_DATA = {
+  template: 'wedding-classic',
+  title: 'Fadi & Mavie',
+  cover: {
+    enabled: true,
+    eventLabel: 'Wedding',
+    names: 'Fadi & Mavie',
+    tagline: 'Are getting married',
+    hostText: 'Chebly and Madi Families',
+    hostIntro: 'With heartfelt joy,',
+    hostOutro: 'invite you to celebrate',
+    image: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800&q=80',
+    buttonText: 'Open Invitation'
+  },
+  countdown: {
+    enabled: true,
+    label: 'Save the date',
+    date: '2024-08-24',
+    description: 'Join us as we begin our forever,\nsurrounded by those we love most.\nYour presence is the greatest gift.',
+    image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80'
+  },
+  locations: {
+    enabled: true,
+    label: 'The Celebration',
+    title: 'Where & When',
+    image: 'https://images.unsplash.com/photo-1478147427282-58a87a702b70?w=800&q=80',
+    items: [
+      { time: '6:30 PM — Ceremony',  name: 'St. Michael Church', addr: 'Bikfaya, Lebanon',       url: 'https://maps.app.goo.gl/LtdauNbSukzWtYPo7' },
+      { time: '7:30 PM — Reception', name: 'Blanc De Chêne',     addr: 'Delb, Bikfaya, Lebanon', url: 'https://maps.app.goo.gl/v8F2Rt6wQKC4EBtE7' }
+    ]
+  },
+  gifts: {
+    enabled: true,
+    label: 'Gift Registry',
+    title: 'With Love',
+    image: 'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=800&q=80',
+    description: 'Your love and presence on our special day\nis the greatest gift of all.\nFor those who wish to give more:',
+    items: [
+      { bank: 'Whish Money', account: '20822391' }
+    ]
+  },
+  rsvp: {
+    enabled: true,
+    label: 'Be Our Guest',
+    title: 'RSVP',
+    image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&q=80',
+    deadline: 'Please reply before July 24, 2024',
+    maxPeople: 10
+  },
+  customSections: []
 };
 
-// ── URL PARAM: np ──────────────────────────────────────
-function getMaxPeople() {
+// ── BASE64URL HELPERS ──────────────────────────────────
+function encodeData(obj) {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(obj))))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function decodeData(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  return JSON.parse(decodeURIComponent(escape(atob(s))));
+}
+
+// ── DATA LOADING ───────────────────────────────────────
+function mergeDefaults(data) {
+  const out = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  for (const k of Object.keys(data || {})) {
+    if (data[k] && typeof data[k] === 'object' && !Array.isArray(data[k]) && out[k]) {
+      out[k] = Object.assign({}, out[k], data[k]);
+    } else {
+      out[k] = data[k];
+    }
+  }
+  return out;
+}
+
+function loadData() {
   const params = new URLSearchParams(window.location.search);
-  // support ?np=4 or ?np4
+
+  const enc = params.get('d');
+  if (enc) {
+    try { return mergeDefaults(decodeData(enc)); }
+    catch (e) { console.warn('Bad ?d payload:', e); }
+  }
+
+  const id = params.get('id');
+  if (id) {
+    try {
+      const all = JSON.parse(localStorage.getItem('ic_people') || '{}');
+      if (all[id]) return mergeDefaults(all[id].data);
+    } catch (e) { console.warn('Bad localStorage:', e); }
+  }
+
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+
+function getMaxPeopleOverride() {
+  const params = new URLSearchParams(window.location.search);
   let val = params.get('np');
   if (!val) {
-    // check raw search for ?np4
-    const raw = window.location.search.replace('?','');
+    const raw = window.location.search.replace('?', '');
     const m = raw.match(/^np(\d+)$/);
     if (m) val = m[1];
   }
-  return val ? parseInt(val) : eventData.maxPeople;
+  return val ? parseInt(val) : null;
 }
 
-// ── INIT ───────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
-  eventData.maxPeople = getMaxPeople();
+// ── HELPERS ────────────────────────────────────────────
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const nl2br = s => esc(s).replace(/\n/g, '<br>');
+const mapIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>';
+
+// ── RENDERERS ──────────────────────────────────────────
+function renderCover(c, isFirst) {
+  const namesHtml = esc(c.names).replace(' &amp; ', '<br>&amp;<br>');
+  return `
+    <div class="bg-img" style="background-image: url('${esc(c.image)}')"></div>
+    <div class="overlay"></div>
+    <div class="page-content">
+      ${c.eventLabel ? `<p class="label">${esc(c.eventLabel)}</p>` : ''}
+      <div class="divider"><span class="divider-icon">✦ ✦ ✦</span></div>
+      <h1 class="title">${namesHtml}</h1>
+      ${c.tagline ? `<p class="subtitle">${esc(c.tagline)}</p>` : ''}
+      <div class="divider"><span class="divider-icon">✦ ✦ ✦</span></div>
+      ${c.hostText ? `<p class="body-text">${esc(c.hostIntro || '')}<br><strong style="color:rgba(255,255,255,.9)">${esc(c.hostText)}</strong><br>${esc(c.hostOutro || '')}</p>` : ''}
+      <button class="btn-start" data-action="next">${esc(c.buttonText || 'Open Invitation')}</button>
+    </div>
+    ${isFirst ? '<div class="swipe-hint"><span>Swipe up</span><div class="swipe-arrow"></div></div>' : ''}
+  `;
+}
+
+function renderCountdown(c) {
+  const dt = new Date(c.date + 'T00:00:00');
+  const dateStr = isNaN(dt) ? c.date : dt.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  return `
+    <div class="bg-img" style="background-image: url('${esc(c.image)}')"></div>
+    <div class="overlay"></div>
+    <div class="page-content">
+      <p class="label">${esc(c.label || 'Save the date')}</p>
+      <h2 class="title" style="font-size:2rem;">${esc(dateStr)}</h2>
+      <div class="divider"><span class="divider-icon">✦ ✦ ✦</span></div>
+      <div class="countdown" data-countdown="${esc(c.date)}">
+        <div class="cd-unit"><span class="cd-num" data-cd="d">0</span><span class="cd-label">Days</span></div>
+        <div class="cd-unit"><span class="cd-num" data-cd="h">0</span><span class="cd-label">Hours</span></div>
+        <div class="cd-unit"><span class="cd-num" data-cd="m">0</span><span class="cd-label">Min</span></div>
+        <div class="cd-unit"><span class="cd-num" data-cd="s">0</span><span class="cd-label">Sec</span></div>
+      </div>
+      <div class="divider"><span class="divider-icon">✦ ✦ ✦</span></div>
+      ${c.description ? `<p class="body-text">${nl2br(c.description)}</p>` : ''}
+    </div>
+  `;
+}
+
+function renderLocations(c) {
+  const cards = (c.items || []).map(loc => `
+    <div class="loc-card">
+      ${loc.time ? `<p class="loc-time">${esc(loc.time)}</p>` : ''}
+      ${loc.name ? `<p class="loc-name">${esc(loc.name)}</p>` : ''}
+      ${loc.addr ? `<p class="loc-addr">${esc(loc.addr)}</p>` : ''}
+      ${loc.url ? `<a class="btn-map" href="${esc(loc.url)}" target="_blank" rel="noopener">${mapIcon} View on Map</a>` : ''}
+    </div>
+  `).join('');
+  return `
+    <div class="bg-img" style="background-image: url('${esc(c.image)}')"></div>
+    <div class="overlay deep"></div>
+    <div class="page-scroll"><div class="page-content" style="min-height:100%;">
+      <p class="label">${esc(c.label || 'The Celebration')}</p>
+      <h2 class="title" style="font-size:1.8rem; margin-bottom:1.5rem;">${esc(c.title || 'Where & When')}</h2>
+      ${cards}
+    </div></div>
+  `;
+}
+
+function renderGifts(c) {
+  const cards = (c.items || []).map(g => `
+    <div class="gift-card">
+      ${g.bank ? `<p class="gift-bank">${esc(g.bank)}</p>` : ''}
+      <p class="gift-acc">${esc(g.account)}</p>
+      <button class="gift-copy" data-copy="${esc(g.account)}">Copy</button>
+    </div>
+  `).join('');
+  return `
+    <div class="bg-img" style="background-image: url('${esc(c.image)}')"></div>
+    <div class="overlay"></div>
+    <div class="page-scroll"><div class="page-content" style="min-height:100%;">
+      <p class="label">${esc(c.label || 'Gift Registry')}</p>
+      <h2 class="title" style="font-size:1.9rem;">${esc(c.title || 'With Love')}</h2>
+      <div class="divider"><span class="divider-icon">✦</span></div>
+      ${c.description ? `<p class="body-text">${nl2br(c.description)}</p>` : ''}
+      ${cards}
+    </div></div>
+  `;
+}
+
+function renderCustom(c) {
+  return `
+    <div class="bg-img" style="background-image: url('${esc(c.image || '')}')"></div>
+    <div class="overlay"></div>
+    <div class="page-scroll"><div class="page-content" style="min-height:100%;">
+      ${c.label ? `<p class="label">${esc(c.label)}</p>` : ''}
+      ${c.title ? `<h2 class="title" style="font-size:1.9rem;">${esc(c.title)}</h2>` : ''}
+      <div class="divider"><span class="divider-icon">✦</span></div>
+      ${c.body ? `<p class="body-text">${nl2br(c.body)}</p>` : ''}
+    </div></div>
+  `;
+}
+
+function renderRsvp(c, maxPeople) {
+  const opts = [];
+  for (let i = 1; i <= maxPeople; i++) opts.push(`<option value="${i}">${i}</option>`);
+  return `
+    <div class="bg-img" style="background-image: url('${esc(c.image)}')"></div>
+    <div class="overlay deepest"></div>
+    <div class="page-scroll"><div class="page-content" style="min-height:100%;">
+      <p class="label">${esc(c.label || 'Be Our Guest')}</p>
+      <h2 class="title" style="font-size:1.9rem;">${esc(c.title || 'RSVP')}</h2>
+      ${c.deadline ? `<p class="body-text" style="margin-top:.5rem;">${esc(c.deadline)}</p>` : ''}
+      <div class="rsvp-form" data-rsvp>
+        <div class="form-group">
+          <label class="form-label">Attendance</label>
+          <select class="form-select" data-attending>
+            <option value="">— Select —</option>
+            <option value="yes">Yes, attending</option>
+            <option value="no">Not attending</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Number of attendees</label>
+          <select class="form-select" data-num-attendees>
+            <option value="">— Select —</option>
+            ${opts.join('')}
+          </select>
+        </div>
+        <div data-name-fields></div>
+        <button class="btn-submit" data-submit-rsvp>Confirm RSVP</button>
+      </div>
+      <div class="success-msg" data-rsvp-success>
+        Thank you for your confirmation!<br>See you there ✦
+      </div>
+    </div></div>
+  `;
+}
+
+// ── BUILD ──────────────────────────────────────────────
+let currentPage = 0;
+let totalPages = 0;
+let countdownTimer = null;
+
+function build(data) {
+  const wrap = document.getElementById('cardWrap');
+  wrap.querySelectorAll('.page').forEach(p => p.remove());
+
+  const sections = [];
+  if (data.cover && data.cover.enabled !== false)         sections.push(['cover', data.cover]);
+  if (data.countdown && data.countdown.enabled !== false) sections.push(['countdown', data.countdown]);
+  if (data.locations && data.locations.enabled !== false && (data.locations.items || []).length) sections.push(['locations', data.locations]);
+  if (data.gifts && data.gifts.enabled !== false && (data.gifts.items || []).length) sections.push(['gifts', data.gifts]);
+  (data.customSections || []).forEach(s => { if (s.enabled !== false) sections.push(['custom', s]); });
+  if (data.rsvp && data.rsvp.enabled !== false) sections.push(['rsvp', data.rsvp]);
+
+  const npOverride = getMaxPeopleOverride();
+  const maxPeople = npOverride || (data.rsvp && data.rsvp.maxPeople) || 10;
+
+  totalPages = sections.length;
+  currentPage = 0;
+  sections.forEach(([type, cfg], i) => {
+    const el = document.createElement('div');
+    el.className = 'page' + (i === 0 ? ' active' : ' below');
+    el.dataset.page = i;
+    if (type === 'cover')      el.innerHTML = renderCover(cfg, true);
+    if (type === 'countdown')  el.innerHTML = renderCountdown(cfg);
+    if (type === 'locations')  el.innerHTML = renderLocations(cfg);
+    if (type === 'gifts')      el.innerHTML = renderGifts(cfg);
+    if (type === 'custom')     el.innerHTML = renderCustom(cfg);
+    if (type === 'rsvp')       el.innerHTML = renderRsvp(cfg, maxPeople);
+    wrap.insertBefore(el, document.getElementById('dots'));
+  });
+
   buildDots();
-  buildAttendeeDropdown();
   startCountdown();
-  applyDataToDOM();
-  setupSwipe();
-});
+  document.title = (data.title || (data.cover && data.cover.names) || 'Invitation') + ' — Invitation';
+}
 
 function buildDots() {
   const c = document.getElementById('dots');
   c.innerHTML = '';
   for (let i = 0; i < totalPages; i++) {
     const d = document.createElement('div');
-    d.className = 'dot' + (i === 0 ? ' active' : '');
-    d.onclick = () => goTo(i);
+    d.className = 'dot' + (i === currentPage ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
     c.appendChild(d);
   }
 }
 
-function buildAttendeeDropdown() {
-  const sel = document.getElementById('numAttendees');
-  sel.innerHTML = '<option value="">— Select —</option>';
-  for (let i = 1; i <= eventData.maxPeople; i++) {
-    const opt = document.createElement('option');
-    opt.value = i; opt.textContent = i;
-    sel.appendChild(opt);
-  }
-}
-
-// ── NAVIGATION ─────────────────────────────────────────
 function goTo(n) {
   if (n < 0 || n >= totalPages) return;
-  const pages = document.querySelectorAll('.page');
-  pages.forEach((p, i) => {
-    p.classList.remove('active','above','below');
+  document.querySelectorAll('.page').forEach((p, i) => {
+    p.classList.remove('active', 'above', 'below');
     if (i === n) p.classList.add('active');
     else if (i < n) p.classList.add('above');
     else p.classList.add('below');
   });
   currentPage = n;
-  document.querySelectorAll('.dot').forEach((d,i) => {
-    d.classList.toggle('active', i === n);
-  });
+  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === n));
 }
 
-// ── SWIPE ──────────────────────────────────────────────
+// ── COUNTDOWN ──────────────────────────────────────────
+function startCountdown() {
+  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+  const node = document.querySelector('[data-countdown]');
+  if (!node) return;
+  const target = new Date(node.dataset.countdown + 'T00:00:00');
+  const tick = () => {
+    const diff = target - new Date();
+    const els = node.querySelectorAll('[data-cd]');
+    if (diff <= 0) { els.forEach(e => e.textContent = '0'); return; }
+    const map = {
+      d: Math.floor(diff / 86400000),
+      h: Math.floor((diff % 86400000) / 3600000),
+      m: Math.floor((diff % 3600000) / 60000),
+      s: Math.floor((diff % 60000) / 1000)
+    };
+    els.forEach(e => e.textContent = map[e.dataset.cd]);
+  };
+  tick();
+  countdownTimer = setInterval(tick, 1000);
+}
+
+// ── EVENTS ─────────────────────────────────────────────
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-action="next"]')) { goTo(currentPage + 1); return; }
+  const copy = e.target.closest('[data-copy]');
+  if (copy) {
+    navigator.clipboard?.writeText(copy.dataset.copy).then(() => {
+      const orig = copy.textContent;
+      copy.textContent = 'Copied ✓';
+      setTimeout(() => copy.textContent = orig, 1500);
+    });
+    return;
+  }
+  if (e.target.closest('[data-submit-rsvp]')) submitRSVP(e.target.closest('[data-submit-rsvp]'));
+});
+
+document.addEventListener('change', e => {
+  if (e.target.matches('[data-num-attendees]')) buildNameFields(e.target);
+});
+
+function buildNameFields(sel) {
+  const n = parseInt(sel.value) || 0;
+  const wrap = sel.closest('[data-rsvp]').querySelector('[data-name-fields]');
+  wrap.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const row = document.createElement('div');
+    row.className = 'form-group';
+    row.innerHTML = `<label class="form-label">Guest ${i + 1} name</label><input class="form-input guest-name" type="text" placeholder="Full name">`;
+    wrap.appendChild(row);
+  }
+}
+
+function submitRSVP(btn) {
+  const form = btn.closest('[data-rsvp]');
+  const att = form.querySelector('[data-attending]').value;
+  const num = form.querySelector('[data-num-attendees]').value;
+  const names = [...form.querySelectorAll('.guest-name')].map(i => i.value.trim());
+  if (!att) return alert('Please select your attendance.');
+  if (att === 'yes' && !num) return alert('Please select number of attendees.');
+  if (att === 'yes' && names.some(n => !n)) return alert('Please fill in all guest names.');
+  form.style.display = 'none';
+  form.parentElement.querySelector('[data-rsvp-success]').style.display = 'block';
+}
+
 function setupSwipe() {
   const wrap = document.getElementById('cardWrap');
   let startY = 0, startX = 0;
-  wrap.addEventListener('touchstart', e => {
-    startY = e.touches[0].clientY;
-    startX = e.touches[0].clientX;
-  }, { passive: true });
+  wrap.addEventListener('touchstart', e => { startY = e.touches[0].clientY; startX = e.touches[0].clientX; }, { passive: true });
   wrap.addEventListener('touchend', e => {
     const dy = startY - e.changedTouches[0].clientY;
     const dx = Math.abs(startX - e.changedTouches[0].clientX);
     if (Math.abs(dy) > 40 && Math.abs(dy) > dx) {
-      if (dy > 0) goTo(currentPage + 1);
-      else goTo(currentPage - 1);
+      if (dy > 0) goTo(currentPage + 1); else goTo(currentPage - 1);
     }
   }, { passive: true });
   wrap.addEventListener('wheel', e => {
@@ -621,151 +648,10 @@ function setupSwipe() {
   }, { passive: true });
 }
 
-// ── COUNTDOWN ─────────────────────────────────────────
-function startCountdown() {
-  function tick() {
-    const target = new Date(eventData.date + 'T00:00:00');
-    const now = new Date();
-    const diff = target - now;
-    if (diff <= 0) {
-      ['cd-d','cd-h','cd-m','cd-s'].forEach(id => document.getElementById(id).textContent = '0');
-      return;
-    }
-    const d = Math.floor(diff / 86400000);
-    const h = Math.floor((diff % 86400000) / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-    document.getElementById('cd-d').textContent = d;
-    document.getElementById('cd-h').textContent = h;
-    document.getElementById('cd-m').textContent = m;
-    document.getElementById('cd-s').textContent = s;
-  }
-  tick(); setInterval(tick, 1000);
-}
-
-// ── RSVP NAME FIELDS ──────────────────────────────────
-function buildNameFields() {
-  const n = parseInt(document.getElementById('numAttendees').value) || 0;
-  const c = document.getElementById('nameFields');
-  c.innerHTML = '';
-  for (let i = 0; i < n; i++) {
-    const row = document.createElement('div');
-    row.className = 'form-group';
-    row.innerHTML = `
-      <label class="form-label">Guest ${i+1} name</label>
-      <input class="form-input guest-name" type="text" placeholder="Full name">
-    `;
-    c.appendChild(row);
-  }
-}
-
-function submitRSVP() {
-  const att = document.getElementById('attending').value;
-  const num = document.getElementById('numAttendees').value;
-  const names = [...document.querySelectorAll('.guest-name')].map(i => i.value.trim());
-
-  if (!att) { alert('Please select your attendance.'); return; }
-  if (att === 'yes' && !num) { alert('Please select number of attendees.'); return; }
-  if (att === 'yes' && names.some(n => !n)) { alert('Please fill in all guest names.'); return; }
-
-  document.getElementById('rsvpForm').style.display = 'none';
-  document.getElementById('successMsg').style.display = 'block';
-}
-
-// ── APPLY DATA TO DOM ─────────────────────────────────
-function applyDataToDOM() {
-  document.getElementById('p1-event-label').textContent = eventData.eventLabel;
-  document.getElementById('p1-names').innerHTML = eventData.names.replace(' & ', '<br>&amp;<br>');
-  document.getElementById('p1-tagline').textContent = eventData.tagline;
-  document.getElementById('p1-host-text').innerHTML = `With heartfelt joy,<br><strong style="color:rgba(255,255,255,.9)">${eventData.hostText}</strong><br>invite you to celebrate`;
-  document.getElementById('bg0').style.backgroundImage = `url('${eventData.images[0]}')`;
-  document.getElementById('bg1').style.backgroundImage = `url('${eventData.images[1]}')`;
-
-  const d = new Date(eventData.date + 'T00:00:00');
-  document.getElementById('p2-date').textContent = d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-  document.getElementById('p2-description').innerHTML = eventData.description.replace(/\n/g,'<br>');
-
-  document.getElementById('loc1-time').textContent = eventData.loc1.time;
-  document.getElementById('loc1-name').textContent = eventData.loc1.name;
-  document.getElementById('loc1-addr').textContent = eventData.loc1.addr;
-  document.getElementById('loc1-btn').href = eventData.loc1.url;
-
-  document.getElementById('loc2-time').textContent = eventData.loc2.time;
-  document.getElementById('loc2-name').textContent = eventData.loc2.name;
-  document.getElementById('loc2-addr').textContent = eventData.loc2.addr;
-  document.getElementById('loc2-btn').href = eventData.loc2.url;
-
-  document.getElementById('gift-bank').textContent = eventData.giftBank;
-  document.getElementById('gift-acc').textContent = eventData.giftAcc;
-  document.getElementById('p4-gift-desc').innerHTML = eventData.giftDesc.replace(/\n/g,'<br>');
-  document.getElementById('p5-deadline').textContent = eventData.deadline;
-
-  document.title = eventData.names + ' — Invitation';
-  startCountdown();
-}
-
-// ── ADMIN ─────────────────────────────────────────────
-function openAdmin()  { document.getElementById('admin-panel').classList.add('open'); populateAdmin(); }
-function closeAdmin() { document.getElementById('admin-panel').classList.remove('open'); }
-
-function populateAdmin() {
-  document.getElementById('a-event-label').value = eventData.eventLabel;
-  document.getElementById('a-names').value = eventData.names;
-  document.getElementById('a-tagline').value = eventData.tagline;
-  document.getElementById('a-host-text').value = eventData.hostText;
-  document.getElementById('a-img0').value = eventData.images[0];
-  document.getElementById('a-img1').value = eventData.images[1];
-  document.getElementById('a-date').value = eventData.date;
-  document.getElementById('a-description').value = eventData.description;
-  document.getElementById('a-loc1-time').value = eventData.loc1.time;
-  document.getElementById('a-loc1-name').value = eventData.loc1.name;
-  document.getElementById('a-loc1-addr').value = eventData.loc1.addr;
-  document.getElementById('a-loc1-url').value = eventData.loc1.url;
-  document.getElementById('a-loc2-time').value = eventData.loc2.time;
-  document.getElementById('a-loc2-name').value = eventData.loc2.name;
-  document.getElementById('a-loc2-addr').value = eventData.loc2.addr;
-  document.getElementById('a-loc2-url').value = eventData.loc2.url;
-  document.getElementById('a-gift-bank').value = eventData.giftBank;
-  document.getElementById('a-gift-acc').value = eventData.giftAcc;
-  document.getElementById('a-gift-desc').value = eventData.giftDesc;
-  document.getElementById('a-deadline').value = eventData.deadline;
-}
-
-function applyAdmin() {
-  eventData.eventLabel = document.getElementById('a-event-label').value;
-  eventData.names = document.getElementById('a-names').value;
-  eventData.tagline = document.getElementById('a-tagline').value;
-  eventData.hostText = document.getElementById('a-host-text').value;
-  eventData.images[0] = document.getElementById('a-img0').value;
-  eventData.images[1] = document.getElementById('a-img1').value;
-  eventData.date = document.getElementById('a-date').value;
-  eventData.description = document.getElementById('a-description').value;
-  eventData.loc1 = {
-    time: document.getElementById('a-loc1-time').value,
-    name: document.getElementById('a-loc1-name').value,
-    addr: document.getElementById('a-loc1-addr').value,
-    url:  document.getElementById('a-loc1-url').value
-  };
-  eventData.loc2 = {
-    time: document.getElementById('a-loc2-time').value,
-    name: document.getElementById('a-loc2-name').value,
-    addr: document.getElementById('a-loc2-addr').value,
-    url:  document.getElementById('a-loc2-url').value
-  };
-  eventData.giftBank = document.getElementById('a-gift-bank').value;
-  eventData.giftAcc  = document.getElementById('a-gift-acc').value;
-  eventData.giftDesc = document.getElementById('a-gift-desc').value;
-  eventData.deadline = document.getElementById('a-deadline').value;
-  applyDataToDOM();
-  closeAdmin();
-}
-
-function previewImg(inputId, previewId) {
-  const src = document.getElementById(inputId).value;
-  const img = document.getElementById(previewId);
-  img.src = src;
-  img.style.display = src ? 'block' : 'none';
-}
+window.addEventListener('DOMContentLoaded', () => {
+  build(loadData());
+  setupSwipe();
+});
 </script>
 </body>
 </html>
