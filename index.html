@@ -334,8 +334,15 @@ function mergeDefaults(data) {
   return out;
 }
 
+// Tolerant query parser: treats stray "?" as "&" so URLs like
+// "?id=foo?np=4" still work even though they aren't strictly valid.
+function parseQuery() {
+  const raw = window.location.search.replace(/^\?/, '').replace(/\?/g, '&');
+  return new URLSearchParams(raw);
+}
+
 function loadData() {
-  const params = new URLSearchParams(window.location.search);
+  const params = parseQuery();
 
   const enc = params.get('d');
   if (enc) {
@@ -355,10 +362,10 @@ function loadData() {
 }
 
 function getMaxPeopleOverride() {
-  const params = new URLSearchParams(window.location.search);
+  const params = parseQuery();
   let val = params.get('np');
   if (!val) {
-    const raw = window.location.search.replace('?', '');
+    const raw = window.location.search.replace(/^\?/, '');
     const m = raw.match(/^np(\d+)$/);
     if (m) val = m[1];
   }
