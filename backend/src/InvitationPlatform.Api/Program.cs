@@ -5,6 +5,7 @@ using InvitationPlatform.Domain.Entities;
 using InvitationPlatform.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 
@@ -150,6 +151,21 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();   // OpenAPI document at /openapi/v1.json
+
+    // Walk up 3 directories (Api → src → backend → repo root) to serve the HTML files.
+    // Allows opening http://localhost:5000/admin.html without any extra config.
+    var repoRoot = builder.Environment.ContentRootPath;
+    for (var i = 0; i < 3; i++) repoRoot = Path.GetDirectoryName(repoRoot) ?? repoRoot;
+
+    if (File.Exists(Path.Combine(repoRoot, "index.html")))
+    {
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(repoRoot),
+            RequestPath  = ""
+        });
+        app.Logger.LogInformation("Serving HTML files from {Root}", repoRoot);
+    }
 }
 
 app.UseCors("Frontend");
