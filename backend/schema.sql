@@ -1,4 +1,12 @@
-﻿CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+﻿-- JWT signing key and other runtime settings are stored here.
+-- The API generates the jwt_signing_key automatically on first boot.
+CREATE TABLE IF NOT EXISTS system_settings (
+    key         VARCHAR(100) PRIMARY KEY,
+    value       TEXT        NOT NULL,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
     "MigrationId" character varying(150) NOT NULL,
     "ProductVersion" character varying(32) NOT NULL,
     CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")

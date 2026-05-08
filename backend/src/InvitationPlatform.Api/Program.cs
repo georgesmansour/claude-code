@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using InvitationPlatform.Api.Auth;
 using InvitationPlatform.Domain.Entities;
@@ -5,19 +6,57 @@ using InvitationPlatform.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── JWT key — loaded from DB, generated once on first boot ────────────
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("DefaultConnection is not configured.");
+
+string jwtKey;
+{
+    await using var conn = new NpgsqlConnection(connectionString);
+    await conn.OpenAsync();
+
+    await using var setup = conn.CreateCommand();
+    setup.CommandText = """
+        CREATE TABLE IF NOT EXISTS system_settings (
+            key         VARCHAR(100) PRIMARY KEY,
+            value       TEXT        NOT NULL,
+            updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        """;
+    await setup.ExecuteNonQueryAsync();
+
+    await using var sel = conn.CreateCommand();
+    sel.CommandText = "SELECT value FROM system_settings WHERE key = 'jwt_signing_key'";
+    var existing = await sel.ExecuteScalarAsync() as string;
+
+    if (existing is not null)
+    {
+        jwtKey = existing;
+    }
+    else
+    {
+        jwtKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        await using var ins = conn.CreateCommand();
+        ins.CommandText = "INSERT INTO system_settings (key, value) VALUES ('jwt_signing_key', @v)";
+        ins.Parameters.AddWithValue("v", jwtKey);
+        await ins.ExecuteNonQueryAsync();
+        Console.WriteLine("INFO  Generated and persisted new JWT signing key.");
+    }
+}
 
 // ── Database ──────────────────────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        connectionString,
         npg => npg.MigrationsAssembly("InvitationPlatform.Infrastructure")));
 
 // ── Auth ─────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<JwtTokenService>();
 
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "dev-secret-change-me-min-32-chars-please";
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opt =>
