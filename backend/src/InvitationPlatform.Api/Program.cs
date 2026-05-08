@@ -55,6 +55,14 @@ builder.Services.AddDbContext<AppDbContext>(o =>
         npg => npg.MigrationsAssembly("InvitationPlatform.Infrastructure")));
 
 // ── Auth ─────────────────────────────────────────────────────────────
+var jwtSettings = new JwtSettings
+{
+    Key           = jwtKey,
+    Issuer        = builder.Configuration["Jwt:Issuer"]        ?? "InvitationPlatform",
+    Audience      = builder.Configuration["Jwt:Audience"]      ?? "InvitationPlatform",
+    ExpiryMinutes = int.TryParse(builder.Configuration["Jwt:ExpiryMinutes"], out var em) ? em : 60
+};
+builder.Services.AddSingleton(jwtSettings);
 builder.Services.AddSingleton<JwtTokenService>();
 
 builder.Services
@@ -67,8 +75,8 @@ builder.Services
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "InvitationPlatform",
-            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "InvitationPlatform",
+            ValidIssuer    = jwtSettings.Issuer,
+            ValidAudience  = jwtSettings.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.FromSeconds(30)
         };

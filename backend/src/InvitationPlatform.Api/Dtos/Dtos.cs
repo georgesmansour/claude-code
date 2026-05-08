@@ -3,7 +3,7 @@ namespace InvitationPlatform.Api.Dtos;
 // ── AUTH ────────────────────────────────────────────────────
 public record LoginRequest(string Email, string Password);
 public record LoginResponse(string Token, string Role, string FullName, bool MustChangePassword);
-public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+public record ChangePasswordRequest(string? CurrentPassword, string NewPassword);
 
 // ── INVITATION DATA SHAPE (matches the existing JS data model) ──
 public class InvitationData
@@ -151,5 +151,5 @@ public record RsvpGuestDto(
 public record DashboardSummary(
     Guid InvitationId, string Slug, string Title,
     DateTime? EventDate, int MaxAttendees,
-    int TotalResponses, int TotalAttending, int TotalDeclined,
-    int TotalMaybe, int ConfirmedSeats, double AcceptanceRate);
+    int TotalRsvps, int Attending, int Declined,
+    int Maybe, int TotalSeats, double AcceptRate);

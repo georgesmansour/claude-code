@@ -52,8 +52,16 @@ public class AuthController(AppDbContext db, JwtTokenService jwt) : ControllerBa
         var clientId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
         var client = await db.ClientAccounts.FindAsync(clientId);
         if (client is null) return Unauthorized();
-        if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, client.PasswordHash))
-            return BadRequest(new { error = "Current password is incorrect" });
+
+        // First-time forced change skips current-password verification
+        if (!client.MustChangePassword)
+        {
+            if (string.IsNullOrEmpty(req.CurrentPassword))
+                return BadRequest(new { error = "Current password is required" });
+            if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, client.PasswordHash))
+                return BadRequest(new { error = "Current password is incorrect" });
+        }
+
         if (req.NewPassword.Length < 6)
             return BadRequest(new { error = "New password must be at least 6 characters" });
 

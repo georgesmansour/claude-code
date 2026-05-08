@@ -5,15 +5,18 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace InvitationPlatform.Api.Auth;
 
-public class JwtTokenService(IConfiguration config)
+public class JwtSettings
+{
+    public required string Key { get; init; }
+    public string Issuer { get; init; } = "InvitationPlatform";
+    public string Audience { get; init; } = "InvitationPlatform";
+    public int ExpiryMinutes { get; init; } = 60;
+}
+
+public class JwtTokenService(JwtSettings settings)
 {
     public string CreateToken(Guid userId, string email, string role, string? fullName, Guid? invitationId = null)
     {
-        var key   = config["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key missing");
-        var iss   = config["Jwt:Issuer"]   ?? "InvitationPlatform";
-        var aud   = config["Jwt:Audience"] ?? "InvitationPlatform";
-        var mins  = int.TryParse(config["Jwt:ExpiryMinutes"], out var m) ? m : 60;
-
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, userId.ToString()),
@@ -25,13 +28,14 @@ public class JwtTokenService(IConfiguration config)
             claims.Add(new("invitation_id", invitationId.Value.ToString()));
 
         var creds = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key)),
             SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: iss, audience: aud,
+            issuer: settings.Issuer,
+            audience: settings.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(mins),
+            expires: DateTime.UtcNow.AddMinutes(settings.ExpiryMinutes),
             signingCredentials: creds);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
