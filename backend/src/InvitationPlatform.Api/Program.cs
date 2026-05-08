@@ -83,15 +83,14 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
-// ── MVC + Swagger ────────────────────────────────────────────────────
+// ── MVC + OpenAPI ────────────────────────────────────────────────────
 builder.Services.AddControllers().AddJsonOptions(o =>
 {
     o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     o.JsonSerializerOptions.DefaultIgnoreCondition =
         System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
 });
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
 
 // ── CORS ─────────────────────────────────────────────────────────────
 builder.Services.AddCors(o => o.AddPolicy("Frontend", p => p
@@ -150,8 +149,7 @@ using (var scope = app.Services.CreateScope())
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi();   // OpenAPI document at /openapi/v1.json
 }
 
 app.UseCors("Frontend");
