@@ -62,8 +62,8 @@ public class AuthController(AppDbContext db, JwtTokenService jwt) : ControllerBa
                 return BadRequest(new { error = "Current password is incorrect" });
         }
 
-        if (req.NewPassword.Length < 6)
-            return BadRequest(new { error = "New password must be at least 6 characters" });
+        if (req.NewPassword.Length < 8)
+            return BadRequest(new { error = "New password must be at least 8 characters" });
 
         client.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
         client.MustChangePassword = false;

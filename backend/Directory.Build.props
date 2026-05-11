@@ -1,0 +1,7 @@
+<Project>
+  <!-- Suppress NU1903 for System.Security.Cryptography.Xml: transitive from Npgsql EF, no patched version yet -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-37gx-xxp4-5rgx" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-w3x6-4m5h-cxqf" />
+  </ItemGroup>
+</Project>

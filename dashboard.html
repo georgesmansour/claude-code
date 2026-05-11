@@ -101,10 +101,41 @@
   .toast-msg.err { border-color: var(--danger); color: var(--danger); }
   .toast-msg.ok { border-color: var(--success); color: var(--success); }
 
+  /* ── TAB NAV ───────────────────────────────────────── */
+  .tabs-nav { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 1.8rem; }
+  .tab-btn { padding: .6rem 1.4rem; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--muted); cursor: pointer; font-family: inherit; font-size: .72rem; letter-spacing: 2px; text-transform: uppercase; transition: all .2s; margin-bottom: -1px; }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ── EDIT FORM ──────────────────────────────────────── */
+  .edit-section { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1.2rem; overflow: hidden; }
+  .edit-section-title { font-size: .72rem; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); padding: .85rem 1.2rem; background: var(--panel-2); border-bottom: 1px solid var(--border); font-weight: 500; }
+  .edit-body { padding: 1.2rem; }
+  .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .edit-field { display: flex; flex-direction: column; gap: 6px; }
+  .edit-field.full { grid-column: 1 / -1; }
+  .edit-field label { font-size: .62rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .edit-field input, .edit-field textarea { padding: .6rem .85rem; background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 4px; color: var(--white); font-family: inherit; font-size: .85rem; outline: none; resize: vertical; }
+  .edit-field input:focus, .edit-field textarea:focus { border-color: var(--gold); }
+  .edit-field textarea { min-height: 70px; }
+  .edit-item-card { background: rgba(255,255,255,.02); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin-bottom: .8rem; }
+  .edit-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; }
+  .edit-item-label { font-size: .68rem; letter-spacing: 2px; text-transform: uppercase; color: var(--gold-light); }
+  .edit-remove-btn { padding: .28rem .65rem; background: transparent; border: 1px solid rgba(217,102,102,.4); border-radius: 4px; color: var(--danger); font-family: inherit; font-size: .62rem; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+  .edit-remove-btn:hover { background: rgba(217,102,102,.1); }
+  .edit-add-btn { width: 100%; padding: .65rem; background: transparent; border: 1px dashed rgba(201,169,110,.35); border-radius: 4px; color: var(--gold-light); font-family: inherit; font-size: .7rem; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-top: .4rem; transition: all .2s; }
+  .edit-add-btn:hover { background: rgba(201,169,110,.06); border-color: var(--gold); }
+  .edit-footer { padding: 1.5rem 0 .5rem; display: flex; gap: 10px; align-items: center; }
+  .btn-save { padding: .7rem 2rem; background: linear-gradient(135deg, var(--gold-dark), var(--gold)); border: none; border-radius: 4px; color: var(--bg); font-family: inherit; font-size: .75rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: opacity .2s; }
+  .btn-save:hover { opacity: .88; }
+  .btn-save:disabled { opacity: .5; cursor: default; }
+  .edit-note { font-size: .72rem; color: var(--muted); }
+
   @media (max-width: 600px) {
     main { padding: 1.2rem .9rem; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .inv-banner { flex-direction: column; align-items: flex-start; }
+    .edit-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -160,46 +191,61 @@
       </div>
     </div>
 
-    <!-- Stats -->
-    <div class="stats-grid">
-      <div class="stat-card"><div class="val" id="statTotal">—</div><div class="lbl">Total RSVPs</div></div>
-      <div class="stat-card green"><div class="val" id="statYes">—</div><div class="lbl">Attending</div></div>
-      <div class="stat-card red"><div class="val" id="statNo">—</div><div class="lbl">Declined</div></div>
-      <div class="stat-card warn"><div class="val" id="statMaybe">—</div><div class="lbl">Maybe</div></div>
-      <div class="stat-card"><div class="val" id="statSeats">—</div><div class="lbl">Total Seats</div></div>
-      <div class="stat-card"><div class="val" id="statRate">—</div><div class="lbl">Accept Rate</div></div>
+    <!-- Tab navigation -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" data-tab="guests" onclick="switchTab('guests',this)">RSVPs</button>
+      <button class="tab-btn" data-tab="edit" onclick="switchTab('edit',this)">Edit Invitation</button>
     </div>
 
-    <!-- RSVP Table -->
-    <div class="section-header">
-      <h3>Guests</h3>
-      <div class="filter-tabs">
-        <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">All</button>
-        <button class="filter-tab" data-filter="yes" onclick="setFilter('yes', this)">Attending</button>
-        <button class="filter-tab" data-filter="no" onclick="setFilter('no', this)">Declined</button>
-        <button class="filter-tab" data-filter="maybe" onclick="setFilter('maybe', this)">Maybe</button>
+    <!-- ── GUESTS TAB ── -->
+    <div id="tab-guests">
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card"><div class="val" id="statTotal">—</div><div class="lbl">Total RSVPs</div></div>
+        <div class="stat-card green"><div class="val" id="statYes">—</div><div class="lbl">Attending</div></div>
+        <div class="stat-card red"><div class="val" id="statNo">—</div><div class="lbl">Declined</div></div>
+        <div class="stat-card warn"><div class="val" id="statMaybe">—</div><div class="lbl">Maybe</div></div>
+        <div class="stat-card"><div class="val" id="statSeats">—</div><div class="lbl">Total Seats</div></div>
+        <div class="stat-card"><div class="val" id="statRate">—</div><div class="lbl">Accept Rate</div></div>
+      </div>
+
+      <!-- RSVP Table -->
+      <div class="section-header">
+        <h3>Guests</h3>
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">All</button>
+          <button class="filter-tab" data-filter="yes" onclick="setFilter('yes', this)">Attending</button>
+          <button class="filter-tab" data-filter="no" onclick="setFilter('no', this)">Declined</button>
+          <button class="filter-tab" data-filter="maybe" onclick="setFilter('maybe', this)">Maybe</button>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search by name, email or phone…" oninput="renderTable()">
+      </div>
+
+      <div class="table-wrap">
+        <table id="rsvpTable">
+          <thead>
+            <tr>
+              <th>Name &amp; Contact</th>
+              <th>Response</th>
+              <th>Party</th>
+              <th>Date</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody id="rsvpBody"></tbody>
+        </table>
+        <div class="empty-state hidden" id="emptyState"><p>No RSVPs found.</p></div>
       </div>
     </div>
 
-    <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Search by name, email or phone…" oninput="renderTable()">
+    <!-- ── EDIT TAB ── -->
+    <div id="tab-edit" style="display:none">
+      <div id="editContent"><p style="color:var(--muted);padding:2rem 0">Loading…</p></div>
     </div>
 
-    <div class="table-wrap">
-      <table id="rsvpTable">
-        <thead>
-          <tr>
-            <th>Name &amp; Contact</th>
-            <th>Response</th>
-            <th>Party</th>
-            <th>Date</th>
-            <th>Message</th>
-          </tr>
-        </thead>
-        <tbody id="rsvpBody"></tbody>
-      </table>
-      <div class="empty-state hidden" id="emptyState"><p>No RSVPs found.</p></div>
-    </div>
   </main>
 </div>
 
@@ -226,12 +272,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const token = sessionStorage.getItem(TOKEN_KEY);
   if (token) {
+    document.getElementById('loginOverlay').classList.add('hidden');
     const user = JSON.parse(sessionStorage.getItem(USER_KEY) || '{}');
     if (user.mustChangePassword) { showChangePw(); return; }
     showApp(user);
     loadDashboard();
   } else {
-    document.getElementById('loginOverlay').classList.remove('hidden');
     document.getElementById('loginEmail').focus();
   }
 
@@ -456,6 +502,203 @@ function renderTable() {
       <td style="font-size:.78rem;color:var(--muted)">${escHtml(r.message || '')}</td>
     </tr>`;
   }).join('');
+}
+
+// ── Tab switching ────────────────────────────────────────────────
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-guests').style.display = tab === 'guests' ? '' : 'none';
+  document.getElementById('tab-edit').style.display   = tab === 'edit'   ? '' : 'none';
+  if (tab === 'edit' && !invEditData) loadEditForm();
+}
+
+// ── Edit form state ──────────────────────────────────────────────
+let invEditData = null;
+
+async function loadEditForm() {
+  const c = document.getElementById('editContent');
+  c.innerHTML = '<p style="color:var(--muted);padding:2rem 0">Loading…</p>';
+  try {
+    const inv = await api('GET', '/api/client/invitation');
+    invEditData = JSON.parse(JSON.stringify(inv.data));
+    renderEditForm();
+  } catch (e) {
+    c.innerHTML = `<p style="color:var(--danger);padding:1rem 0">${escHtml(e.message)}</p>`;
+  }
+}
+
+function renderEditForm() {
+  if (!invEditData) return;
+  const d = invEditData;
+  const cv = d.cover     || {};
+  const cd = d.countdown || {};
+  const rv = d.rsvp      || {};
+  const gf = d.gifts     || {};
+
+  document.getElementById('editContent').innerHTML = `
+
+    <div class="edit-section">
+      <div class="edit-section-title">Names &amp; Event</div>
+      <div class="edit-body">
+        <div class="edit-grid">
+          <div class="edit-field full"><label>Couple / Host names</label><input id="ef-names" value="${escHtml(cv.names||'')}"></div>
+          <div class="edit-field"><label>Event type</label><input id="ef-eventLabel" value="${escHtml(cv.eventLabel||'')}"></div>
+          <div class="edit-field"><label>Tagline</label><input id="ef-tagline" value="${escHtml(cv.tagline||'')}"></div>
+          <div class="edit-field"><label>Host intro line</label><input id="ef-hostIntro" value="${escHtml(cv.hostIntro||'')}"></div>
+          <div class="edit-field full"><label>Hosting families</label><input id="ef-hostText" value="${escHtml(cv.hostText||'')}"></div>
+          <div class="edit-field"><label>Host outro line</label><input id="ef-hostOutro" value="${escHtml(cv.hostOutro||'')}"></div>
+          <div class="edit-field"><label>Open button text</label><input id="ef-buttonText" value="${escHtml(cv.buttonText||'')}"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="edit-section">
+      <div class="edit-section-title">Date &amp; Countdown</div>
+      <div class="edit-body">
+        <div class="edit-grid">
+          <div class="edit-field"><label>Event date</label><input id="ef-date" type="date" value="${escHtml(cd.date||'')}"></div>
+          <div class="edit-field full"><label>Countdown message</label><textarea id="ef-cdDesc">${escHtml(cd.description||'')}</textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="edit-section">
+      <div class="edit-section-title">Locations</div>
+      <div class="edit-body">
+        <div id="editLocations"></div>
+        <button class="edit-add-btn" onclick="addEditLocation()">+ Add location</button>
+      </div>
+    </div>
+
+    <div class="edit-section">
+      <div class="edit-section-title">Gift Registry</div>
+      <div class="edit-body">
+        <div class="edit-grid" style="margin-bottom:1rem">
+          <div class="edit-field full"><label>Description</label><textarea id="ef-giftsDesc">${escHtml(gf.description||'')}</textarea></div>
+        </div>
+        <div id="editGifts"></div>
+        <button class="edit-add-btn" onclick="addEditGift()">+ Add account</button>
+      </div>
+    </div>
+
+    <div class="edit-section">
+      <div class="edit-section-title">RSVP Settings</div>
+      <div class="edit-body">
+        <div class="edit-grid">
+          <div class="edit-field full"><label>Deadline message</label><input id="ef-rsvpDeadline" value="${escHtml(rv.deadline||'')}"></div>
+          <div class="edit-field"><label>Max guests per RSVP</label><input id="ef-rsvpMax" type="number" min="1" max="50" value="${rv.maxPeople||10}"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="edit-footer">
+      <button class="btn-save" id="saveBtn" onclick="saveInvitation()">Save Changes</button>
+      <span class="edit-note">Images and template design are managed by your planner.</span>
+    </div>
+  `;
+
+  renderEditLocations();
+  renderEditGifts();
+}
+
+function renderEditLocations() {
+  const items = invEditData.locations?.items || [];
+  document.getElementById('editLocations').innerHTML = items.length ? items.map((loc, i) => `
+    <div class="edit-item-card">
+      <div class="edit-item-header">
+        <span class="edit-item-label">Location ${i + 1}</span>
+        <button class="edit-remove-btn" onclick="removeEditLocation(${i})">Remove</button>
+      </div>
+      <div class="edit-grid">
+        <div class="edit-field"><label>Time / Type</label>
+          <input value="${escHtml(loc.time||'')}" oninput="invEditData.locations.items[${i}].time=this.value"></div>
+        <div class="edit-field"><label>Venue name</label>
+          <input value="${escHtml(loc.name||'')}" oninput="invEditData.locations.items[${i}].name=this.value"></div>
+        <div class="edit-field"><label>Address</label>
+          <input value="${escHtml(loc.addr||'')}" oninput="invEditData.locations.items[${i}].addr=this.value"></div>
+        <div class="edit-field"><label>Maps URL</label>
+          <input value="${escHtml(loc.url||'')}" oninput="invEditData.locations.items[${i}].url=this.value"></div>
+      </div>
+    </div>`).join('') : '<p style="font-size:.78rem;color:var(--muted);margin-bottom:.8rem">No locations added yet.</p>';
+}
+
+function renderEditGifts() {
+  const items = invEditData.gifts?.items || [];
+  document.getElementById('editGifts').innerHTML = items.length ? items.map((g, i) => `
+    <div class="edit-item-card">
+      <div class="edit-item-header">
+        <span class="edit-item-label">Account ${i + 1}</span>
+        <button class="edit-remove-btn" onclick="removeEditGift(${i})">Remove</button>
+      </div>
+      <div class="edit-grid">
+        <div class="edit-field"><label>Bank / Wallet</label>
+          <input value="${escHtml(g.bank||'')}" oninput="invEditData.gifts.items[${i}].bank=this.value"></div>
+        <div class="edit-field"><label>Account / IBAN</label>
+          <input value="${escHtml(g.account||'')}" oninput="invEditData.gifts.items[${i}].account=this.value"></div>
+      </div>
+    </div>`).join('') : '<p style="font-size:.78rem;color:var(--muted);margin-bottom:.8rem">No accounts added yet.</p>';
+}
+
+function addEditLocation() {
+  invEditData.locations = invEditData.locations || { items: [] };
+  invEditData.locations.items = invEditData.locations.items || [];
+  invEditData.locations.items.push({ time: '', name: '', addr: '', url: '' });
+  renderEditLocations();
+}
+function removeEditLocation(i) {
+  invEditData.locations.items.splice(i, 1);
+  renderEditLocations();
+}
+function addEditGift() {
+  invEditData.gifts = invEditData.gifts || { items: [] };
+  invEditData.gifts.items = invEditData.gifts.items || [];
+  invEditData.gifts.items.push({ bank: '', account: '' });
+  renderEditGifts();
+}
+function removeEditGift(i) {
+  invEditData.gifts.items.splice(i, 1);
+  renderEditGifts();
+}
+
+async function saveInvitation() {
+  if (!invEditData) return;
+  const d = invEditData;
+
+  // Collect simple text fields from DOM (items are already live in invEditData)
+  const cv = d.cover     = d.cover     || {};
+  const cd = d.countdown = d.countdown || {};
+  const gf = d.gifts     = d.gifts     || {};
+  const rv = d.rsvp      = d.rsvp      || {};
+
+  cv.names       = document.getElementById('ef-names')?.value        ?? cv.names;
+  cv.eventLabel  = document.getElementById('ef-eventLabel')?.value   ?? '';
+  cv.tagline     = document.getElementById('ef-tagline')?.value      ?? '';
+  cv.hostIntro   = document.getElementById('ef-hostIntro')?.value    ?? '';
+  cv.hostText    = document.getElementById('ef-hostText')?.value     ?? '';
+  cv.hostOutro   = document.getElementById('ef-hostOutro')?.value    ?? '';
+  cv.buttonText  = document.getElementById('ef-buttonText')?.value   ?? '';
+  cd.date        = document.getElementById('ef-date')?.value         ?? '';
+  cd.description = document.getElementById('ef-cdDesc')?.value       ?? '';
+  gf.description = document.getElementById('ef-giftsDesc')?.value    ?? '';
+  rv.deadline    = document.getElementById('ef-rsvpDeadline')?.value ?? '';
+  rv.maxPeople   = parseInt(document.getElementById('ef-rsvpMax')?.value) || 10;
+
+  const title = cv.names || 'Invitation';
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    await api('PUT', '/api/client/invitation', { title, data: d });
+    toast('Changes saved!', 'ok');
+    // Refresh the banner title
+    document.getElementById('bannerTitle').textContent = title;
+    document.getElementById('invTitle').textContent    = title;
+  } catch (e) {
+    toast(e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────

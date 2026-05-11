@@ -246,6 +246,7 @@
 
   .page-scroll { overflow-y: auto; max-height: 100%; width: 100%; }
   .page-scroll::-webkit-scrollbar { width: 0; }
+  textarea.form-input { min-height: 60px; resize: vertical; }
 </style>
 </head>
 <body>
@@ -517,6 +518,7 @@ function renderRsvp(c, maxPeople) {
           <select class="form-select" data-attending>
             <option value="">— Select —</option>
             <option value="yes">Yes, attending</option>
+            <option value="maybe">Maybe, not sure yet</option>
             <option value="no">Not attending</option>
           </select>
         </div>
@@ -526,6 +528,22 @@ function renderRsvp(c, maxPeople) {
             <option value="">— Select —</option>
             ${opts.join('')}
           </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Your name</label>
+          <input class="form-input" data-contact-name type="text" placeholder="Full name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email <span style="opacity:.5">(optional)</span></label>
+          <input class="form-input" data-contact-email type="email" placeholder="your@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone <span style="opacity:.5">(optional)</span></label>
+          <input class="form-input" data-contact-phone type="tel" placeholder="+1 …">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message <span style="opacity:.5">(optional)</span></label>
+          <textarea class="form-input" data-contact-message rows="2" placeholder="A note for the couple…"></textarea>
         </div>
         <div data-name-fields></div>
         <button class="btn-submit" data-submit-rsvp>Confirm RSVP</button>
@@ -655,11 +673,16 @@ function buildNameFields(sel) {
 
 async function submitRSVP(btn) {
   const form = btn.closest('[data-rsvp]');
-  const att = form.querySelector('[data-attending]').value;
-  const num = form.querySelector('[data-num-attendees]').value;
-  const names = [...form.querySelectorAll('.guest-name')].map(i => i.value.trim());
+  const att         = form.querySelector('[data-attending]').value;
+  const num         = form.querySelector('[data-num-attendees]').value;
+  const names       = [...form.querySelectorAll('.guest-name')].map(i => i.value.trim());
+  const contactName  = form.querySelector('[data-contact-name]').value.trim();
+  const contactEmail = form.querySelector('[data-contact-email]').value.trim();
+  const contactPhone = form.querySelector('[data-contact-phone]').value.trim();
+  const message      = form.querySelector('[data-contact-message]').value.trim();
 
   if (!att) return alert('Please select your attendance.');
+  if (!contactName) return alert('Please enter your name.');
   if (att === 'yes' && !num) return alert('Please select number of attendees.');
   if (att === 'yes' && names.some(n => !n)) return alert('Please fill in all guest names.');
 
@@ -675,6 +698,10 @@ async function submitRSVP(btn) {
         body: JSON.stringify({
           response: att,
           partySize: att === 'yes' ? parseInt(num) : 0,
+          contactName:  contactName  || null,
+          contactEmail: contactEmail || null,
+          contactPhone: contactPhone || null,
+          message:      message      || null,
           guests: (att === 'yes' ? names : []).map(n => ({ fullName: n }))
         })
       });

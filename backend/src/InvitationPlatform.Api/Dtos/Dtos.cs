@@ -147,6 +147,9 @@ public record RsvpGuestDto(
     string FullName, string? AgeGroup,
     string? MealPreference, string? DietaryRestrictions);
 
+// ── CLIENT SELF-EDIT ───────────────────────────────────────
+public record ClientUpdateInvitationRequest(string Title, InvitationData Data);
+
 // ── DASHBOARD ──────────────────────────────────────────────
 public record DashboardSummary(
     Guid InvitationId, string Slug, string Title,

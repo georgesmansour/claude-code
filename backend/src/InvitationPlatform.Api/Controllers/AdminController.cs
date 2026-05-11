@@ -123,7 +123,9 @@ public class AdminController(AppDbContext db) : ControllerBase
             Slug = req.Slug,
             Title = req.Title,
             EventType = req.EventType,
-            EventDate = req.EventDate?.ToUniversalTime(),
+            EventDate = req.EventDate.HasValue
+                ? DateTime.SpecifyKind(req.EventDate.Value.Date, DateTimeKind.Utc)
+                : null,
             Status = InvitationStatus.Draft,
             PublicToken = RandomHex(24)
         };
@@ -148,8 +150,11 @@ public class AdminController(AppDbContext db) : ControllerBase
         inv.Title = req.Title;
         inv.Slug = req.Slug;
         inv.EventType = req.EventType;
-        inv.EventDate = req.EventDate?.ToUniversalTime();
+        inv.EventDate = req.EventDate.HasValue
+            ? DateTime.SpecifyKind(req.EventDate.Value.Date, DateTimeKind.Utc)
+            : null;
         inv.MaxAttendees = req.MaxAttendees;
+        inv.UpdatedAt = DateTime.UtcNow;
         InvitationDataMapper.ApplyData(inv, req.Data);
         await db.SaveChangesAsync();
         return Ok();
@@ -162,6 +167,7 @@ public class AdminController(AppDbContext db) : ControllerBase
         if (inv is null) return NotFound();
         inv.Status = InvitationStatus.Published;
         inv.PublishedAt = DateTime.UtcNow;
+        inv.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Ok();
     }
@@ -172,6 +178,7 @@ public class AdminController(AppDbContext db) : ControllerBase
         var inv = await db.Invitations.FindAsync(id);
         if (inv is null) return NotFound();
         inv.Status = InvitationStatus.Draft;
+        inv.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Ok();
     }

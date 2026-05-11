@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using InvitationPlatform.Api.Dtos;
+using InvitationPlatform.Api.Services;
 using InvitationPlatform.Domain.Enums;
 using InvitationPlatform.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -15,6 +16,72 @@ public class ClientController(AppDbContext db) : ControllerBase
 {
     private Guid CurrentInvitationId =>
         Guid.Parse(User.FindFirst("invitation_id")!.Value);
+
+    // ── INVITATION SELF-EDIT ─────────────────────────────────
+
+    [HttpGet("invitation")]
+    public async Task<IActionResult> GetInvitation()
+    {
+        var inv = await db.Invitations
+            .Include(i => i.Sections).ThenInclude(s => s.Locations)
+            .Include(i => i.Sections).ThenInclude(s => s.GiftAccounts)
+            .FirstOrDefaultAsync(i => i.Id == CurrentInvitationId);
+        if (inv is null) return NotFound();
+        return Ok(new InvitationFull(
+            inv.Id, inv.Slug, inv.Title, inv.Status.ToString(),
+            inv.EventType, inv.EventDate, inv.MaxAttendees, inv.TemplateId,
+            InvitationDataMapper.ToData(inv)));
+    }
+
+    [HttpPut("invitation")]
+    public async Task<IActionResult> UpdateInvitation([FromBody] ClientUpdateInvitationRequest req)
+    {
+        var inv = await db.Invitations
+            .Include(i => i.Sections).ThenInclude(s => s.Locations)
+            .Include(i => i.Sections).ThenInclude(s => s.GiftAccounts)
+            .FirstOrDefaultAsync(i => i.Id == CurrentInvitationId);
+        if (inv is null) return NotFound();
+
+        // Preserve admin-managed fields: images, section enabled/disabled, custom sections
+        var current = InvitationDataMapper.ToData(inv);
+        var d = req.Data;
+
+        if (d.Cover != null)
+        {
+            d.Cover.Image   = current.Cover?.Image;
+            d.Cover.Enabled = current.Cover?.Enabled ?? true;
+        }
+        if (d.Countdown != null)
+        {
+            d.Countdown.Image   = current.Countdown?.Image;
+            d.Countdown.Enabled = current.Countdown?.Enabled ?? true;
+        }
+        if (d.Locations != null)
+        {
+            d.Locations.Image   = current.Locations?.Image;
+            d.Locations.Enabled = current.Locations?.Enabled ?? true;
+        }
+        if (d.Gifts != null)
+        {
+            d.Gifts.Image   = current.Gifts?.Image;
+            d.Gifts.Enabled = current.Gifts?.Enabled ?? true;
+        }
+        if (d.Rsvp != null)
+        {
+            d.Rsvp.Image   = current.Rsvp?.Image;
+            d.Rsvp.Enabled = current.Rsvp?.Enabled ?? true;
+        }
+
+        d.CustomSections = current.CustomSections;
+
+        inv.Title = req.Title;
+        inv.UpdatedAt = DateTime.UtcNow;
+        InvitationDataMapper.ApplyData(inv, d);
+        await db.SaveChangesAsync();
+        return Ok();
+    }
+
+    // ── DASHBOARD ────────────────────────────────────────────
 
     [HttpGet("dashboard/summary")]
     public async Task<IActionResult> Summary()
