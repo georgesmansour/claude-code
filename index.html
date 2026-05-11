@@ -260,7 +260,7 @@
 <script>
 // ── API CONFIG ─────────────────────────────────────────
 // Override at runtime by setting window.API_BASE before this script runs,
-// e.g.  <script>window.API_BASE = 'https://my-api.azurewebsites.net'</script>
+// e.g.  <script>window.API_BASE = 'https://my-api.azurewebsites.net'<\/script>
 const API_BASE = (typeof window !== 'undefined' && window.API_BASE)
   ? window.API_BASE.replace(/\/$/, '')
   : '';   // empty = same-origin
