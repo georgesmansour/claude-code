@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+out/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+.idea/
+
+# NuGet
+*.nupkg
+.nuget/
+
+# !! SECRETS — never commit these !!
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+*.pfx
+*.key
+secrets.json
+
+# Runtime
+logs/
+*.log

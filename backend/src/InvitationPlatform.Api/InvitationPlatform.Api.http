@@ -1,0 +1,6 @@
+@InvitationPlatform.Api_HostAddress = http://localhost:5034
+
+GET {{InvitationPlatform.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

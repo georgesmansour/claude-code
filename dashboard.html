@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Invitation — Dashboard</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #c9a96e; --gold-light: #e8d5b0; --gold-dark: #9a7a4a;
+    --bg: #0e0c0b; --panel: #181513; --panel-2: #221d19;
+    --border: rgba(201,169,110,.18); --border-strong: rgba(201,169,110,.4);
+    --white: #ffffff; --text: rgba(255,255,255,.85); --muted: rgba(255,255,255,.5);
+    --danger: #d96666; --success: #6ed68a; --warn: #e0b96e;
+  }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Jost', sans-serif; min-height: 100vh; }
+
+  /* ── LOGIN / CHANGE-PW ─────────────────────────────── */
+  .overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+  .overlay.hidden { display: none; }
+  .card { width: 90%; max-width: 400px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 2.8rem 2.2rem; text-align: center; }
+  .card h1 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 300; color: var(--gold); margin-bottom: .25rem; }
+  .card p.sub { font-size: .8rem; color: var(--muted); margin-bottom: 1.8rem; line-height: 1.6; }
+  .card input { width: 100%; padding: .8rem 1rem; background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 4px; color: var(--white); font-size: .9rem; outline: none; margin-bottom: .9rem; font-family: inherit; }
+  .card input:focus { border-color: var(--gold); }
+  .card button.primary { width: 100%; padding: .85rem; background: linear-gradient(135deg, var(--gold-dark), var(--gold)); border: none; border-radius: 4px; color: var(--bg); font-family: inherit; font-size: .75rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-top: .25rem; }
+  .card button:disabled { opacity: .5; cursor: default; }
+  .card .err { color: var(--danger); font-size: .75rem; margin-bottom: .6rem; min-height: 1em; }
+  .card .api-note { margin-top: 1.2rem; font-size: .62rem; color: var(--muted); word-break: break-all; }
+
+  /* ── TOPBAR ────────────────────────────────────────── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+  #app.visible { display: flex; }
+  .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: .9rem 1.6rem; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+  .topbar .brand { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 300; color: var(--gold); }
+  .topbar .brand span { font-family: 'Jost', sans-serif; font-size: .65rem; font-weight: 400; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; display: block; margin-top: -2px; }
+  .topbar .right { display: flex; align-items: center; gap: 14px; }
+  .topbar .user { font-size: .75rem; color: var(--muted); }
+  .topbar .user strong { color: var(--gold-light); font-weight: 500; }
+  .btn-sm { padding: .4rem .9rem; background: transparent; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-family: inherit; font-size: .7rem; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: all .2s; }
+  .btn-sm:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* ── MAIN ──────────────────────────────────────────── */
+  main { flex: 1; padding: 2rem 1.6rem; max-width: 1100px; width: 100%; margin: 0 auto; }
+
+  /* ── INVITATION BANNER ─────────────────────────────── */
+  .inv-banner { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1.6rem 2rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+  .inv-banner .titles h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 300; color: var(--gold-light); }
+  .inv-banner .titles p { font-size: .78rem; color: var(--muted); margin-top: .25rem; }
+  .inv-banner .actions { display: flex; gap: 8px; }
+  .btn-view { padding: .55rem 1.2rem; background: linear-gradient(135deg, var(--gold-dark), var(--gold)); border: none; border-radius: 4px; color: var(--bg); font-family: inherit; font-size: .7rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; text-decoration: none; }
+
+  /* ── STAT CARDS ────────────────────────────────────── */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1rem; text-align: center; }
+  .stat-card .val { font-family: 'Cormorant Garamond', serif; font-size: 2.4rem; font-weight: 400; color: var(--gold); line-height: 1; }
+  .stat-card .lbl { font-size: .65rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: .4rem; }
+  .stat-card.green .val { color: var(--success); }
+  .stat-card.red .val { color: var(--danger); }
+  .stat-card.warn .val { color: var(--warn); }
+
+  /* ── RSVP TABLE ────────────────────────────────────── */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
+  .section-header h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 300; color: var(--gold-light); }
+  .filter-tabs { display: flex; gap: 4px; }
+  .filter-tab { padding: .35rem .8rem; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--muted); cursor: pointer; font-family: inherit; font-size: .68rem; letter-spacing: 1.5px; text-transform: uppercase; transition: all .2s; }
+  .filter-tab:hover { color: var(--text); }
+  .filter-tab.active { background: rgba(201,169,110,.1); color: var(--gold-light); border-color: var(--border); }
+
+  .search-bar { margin-bottom: 1rem; }
+  .search-bar input { width: 100%; max-width: 360px; padding: .6rem .9rem; background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 4px; color: var(--white); font-size: .82rem; outline: none; font-family: inherit; }
+  .search-bar input:focus { border-color: var(--gold); }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  thead th { padding: .65rem 1rem; text-align: left; font-size: .62rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
+  tbody tr:hover { background: rgba(201,169,110,.04); }
+  tbody td { padding: .75rem 1rem; color: var(--text); vertical-align: top; }
+  .td-name { font-weight: 500; color: var(--white); }
+  .td-contact { font-size: .75rem; color: var(--muted); }
+  .badge { display: inline-block; padding: .2rem .6rem; border-radius: 3px; font-size: .62rem; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; }
+  .badge-yes { background: rgba(110,214,138,.12); color: var(--success); }
+  .badge-no { background: rgba(217,102,102,.12); color: var(--danger); }
+  .badge-maybe { background: rgba(224,185,110,.12); color: var(--warn); }
+  .guests-list { margin-top: .4rem; display: flex; flex-direction: column; gap: .2rem; }
+  .guest-row { font-size: .72rem; color: var(--muted); }
+
+  .empty-state { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+  .empty-state p { font-size: .9rem; }
+
+  /* ── CHANGE PASSWORD ───────────────────────────────── */
+  #changePwOverlay .card p.warn-text { color: var(--warn); font-size: .82rem; margin-bottom: 1.5rem; }
+
+  /* ── TOAST ─────────────────────────────────────────── */
+  #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast-msg { padding: .7rem 1.2rem; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; font-size: .8rem; color: var(--text); opacity: 0; transform: translateY(10px); transition: all .3s; max-width: 320px; }
+  .toast-msg.in { opacity: 1; transform: translateY(0); }
+  .toast-msg.err { border-color: var(--danger); color: var(--danger); }
+  .toast-msg.ok { border-color: var(--success); color: var(--success); }
+
+  @media (max-width: 600px) {
+    main { padding: 1.2rem .9rem; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .inv-banner { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ───────────────────────────────────────────────── -->
+<div id="loginOverlay" class="overlay">
+  <div class="card">
+    <h1>Welcome</h1>
+    <p class="sub">Sign in with the credentials provided by your invitation planner.</p>
+    <div class="err" id="loginErr"></div>
+    <input type="email" id="loginEmail" placeholder="Email address" autocomplete="username">
+    <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+    <button class="primary" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <p class="api-note" id="loginApiNote"></p>
+  </div>
+</div>
+
+<!-- ── CHANGE PASSWORD ──────────────────────────────────────── -->
+<div id="changePwOverlay" class="overlay hidden">
+  <div class="card">
+    <h1>New Password</h1>
+    <p class="warn-text">Your administrator has assigned a temporary password. Please choose a new password before continuing.</p>
+    <div class="err" id="cpErr"></div>
+    <input type="password" id="cpNew" placeholder="New password (min. 8 characters)" autocomplete="new-password">
+    <input type="password" id="cpConfirm" placeholder="Confirm new password" autocomplete="new-password">
+    <button class="primary" id="cpBtn" onclick="doChangePassword()">Set Password</button>
+  </div>
+</div>
+
+<!-- ── APP ─────────────────────────────────────────────────── -->
+<div id="app">
+  <nav class="topbar">
+    <div class="brand">
+      Invitation Dashboard
+      <span id="invTitle">—</span>
+    </div>
+    <div class="right">
+      <span class="user">Signed in as <strong id="userLabel">—</strong></span>
+      <button class="btn-sm" onclick="doLogout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Banner -->
+    <div class="inv-banner">
+      <div class="titles">
+        <h2 id="bannerTitle">—</h2>
+        <p id="bannerMeta">—</p>
+      </div>
+      <div class="actions">
+        <a class="btn-view" id="viewInvLink" href="#" target="_blank">View Invitation ↗</a>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card"><div class="val" id="statTotal">—</div><div class="lbl">Total RSVPs</div></div>
+      <div class="stat-card green"><div class="val" id="statYes">—</div><div class="lbl">Attending</div></div>
+      <div class="stat-card red"><div class="val" id="statNo">—</div><div class="lbl">Declined</div></div>
+      <div class="stat-card warn"><div class="val" id="statMaybe">—</div><div class="lbl">Maybe</div></div>
+      <div class="stat-card"><div class="val" id="statSeats">—</div><div class="lbl">Total Seats</div></div>
+      <div class="stat-card"><div class="val" id="statRate">—</div><div class="lbl">Accept Rate</div></div>
+    </div>
+
+    <!-- RSVP Table -->
+    <div class="section-header">
+      <h3>Guests</h3>
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">All</button>
+        <button class="filter-tab" data-filter="yes" onclick="setFilter('yes', this)">Attending</button>
+        <button class="filter-tab" data-filter="no" onclick="setFilter('no', this)">Declined</button>
+        <button class="filter-tab" data-filter="maybe" onclick="setFilter('maybe', this)">Maybe</button>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search by name, email or phone…" oninput="renderTable()">
+    </div>
+
+    <div class="table-wrap">
+      <table id="rsvpTable">
+        <thead>
+          <tr>
+            <th>Name &amp; Contact</th>
+            <th>Response</th>
+            <th>Party</th>
+            <th>Date</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody id="rsvpBody"></tbody>
+      </table>
+      <div class="empty-state hidden" id="emptyState"><p>No RSVPs found.</p></div>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ── Config ──────────────────────────────────────────────────────
+const API_BASE = (typeof window !== 'undefined' && window.API_BASE)
+  ? window.API_BASE.replace(/\/$/, '') : '';
+
+const TOKEN_KEY  = 'db_client_token';
+const USER_KEY   = 'db_client_user';
+
+// ── State ────────────────────────────────────────────────────────
+let allRsvps = [];
+let currentFilter = 'all';
+
+// ── Boot ─────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loginApiNote').textContent = API_BASE
+    ? 'API: ' + API_BASE : 'API: same origin';
+
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  if (token) {
+    const user = JSON.parse(sessionStorage.getItem(USER_KEY) || '{}');
+    if (user.mustChangePassword) { showChangePw(); return; }
+    showApp(user);
+    loadDashboard();
+  } else {
+    document.getElementById('loginOverlay').classList.remove('hidden');
+    document.getElementById('loginEmail').focus();
+  }
+
+  // Enter key on login
+  document.getElementById('loginPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('loginEmail').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('loginPassword').focus();
+  });
+});
+
+// ── API helper ───────────────────────────────────────────────────
+async function api(method, path, body) {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  const headers = { 'Accept': 'application/json' };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
+  const res = await fetch(API_BASE + path, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined
+  });
+
+  if (res.status === 401) { doLogout(); throw new Error('Session expired. Please sign in again.'); }
+  if (res.status === 204) return null;
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error((data && (data.error || data.title)) || `HTTP ${res.status}`);
+  return data;
+}
+
+// ── Auth ─────────────────────────────────────────────────────────
+async function doLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('loginErr');
+  const btn      = document.getElementById('loginBtn');
+
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Email and password are required.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+
+  try {
+    const res = await fetch(API_BASE + '/api/auth/client/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) { errEl.textContent = (data && (data.error || data.title)) || 'Invalid credentials.'; return; }
+
+    sessionStorage.setItem(TOKEN_KEY, data.token);
+    sessionStorage.setItem(USER_KEY, JSON.stringify(data));
+
+    if (data.mustChangePassword) {
+      document.getElementById('loginOverlay').classList.add('hidden');
+      showChangePw();
+    } else {
+      document.getElementById('loginOverlay').classList.add('hidden');
+      showApp(data);
+      loadDashboard();
+    }
+  } catch (e) {
+    errEl.textContent = e.message || 'Connection error.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  allRsvps = [];
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginErr').textContent = '';
+}
+
+// ── Change password ──────────────────────────────────────────────
+function showChangePw() {
+  document.getElementById('changePwOverlay').classList.remove('hidden');
+  document.getElementById('cpNew').focus();
+}
+
+async function doChangePassword() {
+  const np   = document.getElementById('cpNew').value;
+  const cp   = document.getElementById('cpConfirm').value;
+  const errEl = document.getElementById('cpErr');
+  const btn  = document.getElementById('cpBtn');
+
+  errEl.textContent = '';
+  if (np.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; return; }
+  if (np !== cp)     { errEl.textContent = 'Passwords do not match.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    await api('POST', '/api/auth/client/change-password', { newPassword: np });
+    const user = JSON.parse(sessionStorage.getItem(USER_KEY) || '{}');
+    user.mustChangePassword = false;
+    sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+    document.getElementById('changePwOverlay').classList.add('hidden');
+    showApp(user);
+    loadDashboard();
+    toast('Password updated.', 'ok');
+  } catch (e) {
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Set Password';
+  }
+}
+
+// ── App ──────────────────────────────────────────────────────────
+function showApp(user) {
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('userLabel').textContent = user.fullName || user.email || 'You';
+}
+
+async function loadDashboard() {
+  try {
+    const [summary, rsvps] = await Promise.all([
+      api('GET', '/api/client/dashboard/summary'),
+      api('GET', '/api/client/dashboard/attendees')
+    ]);
+
+    // Banner
+    document.getElementById('invTitle').textContent   = summary.title || '';
+    document.getElementById('bannerTitle').textContent = summary.title || 'Your Invitation';
+    const eventDate = summary.eventDate
+      ? new Date(summary.eventDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+      : null;
+    document.getElementById('bannerMeta').textContent =
+      [eventDate, summary.slug ? `/${summary.slug}` : null].filter(Boolean).join(' · ');
+
+    const viewLink = document.getElementById('viewInvLink');
+    if (summary.slug) {
+      viewLink.href = `${window.location.origin}/index.html?id=${encodeURIComponent(summary.slug)}`;
+    } else {
+      viewLink.style.display = 'none';
+    }
+
+    // Stats
+    document.getElementById('statTotal').textContent = summary.totalRsvps ?? '—';
+    document.getElementById('statYes').textContent   = summary.attending  ?? '—';
+    document.getElementById('statNo').textContent    = summary.declined   ?? '—';
+    document.getElementById('statMaybe').textContent = summary.maybe      ?? '—';
+    document.getElementById('statSeats').textContent = summary.totalSeats ?? '—';
+    document.getElementById('statRate').textContent  = summary.totalRsvps
+      ? summary.acceptRate + '%' : '—';
+
+    // RSVPs
+    allRsvps = rsvps || [];
+    renderTable();
+
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+// ── Table ────────────────────────────────────────────────────────
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+function renderTable() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  let rows = allRsvps;
+
+  if (currentFilter !== 'all')
+    rows = rows.filter(r => r.response?.toLowerCase() === currentFilter);
+
+  if (q)
+    rows = rows.filter(r =>
+      (r.contactName  || '').toLowerCase().includes(q) ||
+      (r.contactEmail || '').toLowerCase().includes(q) ||
+      (r.contactPhone || '').toLowerCase().includes(q)
+    );
+
+  const tbody = document.getElementById('rsvpBody');
+  const empty = document.getElementById('emptyState');
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = rows.map(r => {
+    const resp = (r.response || '').toLowerCase();
+    const badgeCls = resp === 'yes' ? 'badge-yes' : resp === 'no' ? 'badge-no' : 'badge-maybe';
+    const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+
+    const guests = (r.guests || []).map(g => {
+      const parts = [g.fullName, g.ageGroup, g.mealPreference, g.dietaryRestrictions].filter(Boolean);
+      return `<div class="guest-row">• ${escHtml(parts.join(' · '))}</div>`;
+    }).join('');
+
+    const contact = [r.contactEmail, r.contactPhone].filter(Boolean).map(escHtml).join(' · ');
+
+    return `<tr>
+      <td>
+        <div class="td-name">${escHtml(r.contactName || '—')}</div>
+        ${contact ? `<div class="td-contact">${contact}</div>` : ''}
+      </td>
+      <td><span class="badge ${badgeCls}">${escHtml(r.response || '—')}</span></td>
+      <td>${r.partySize ?? '—'}
+        ${guests ? `<div class="guests-list">${guests}</div>` : ''}
+      </td>
+      <td style="white-space:nowrap;color:var(--muted);font-size:.75rem">${date}</td>
+      <td style="font-size:.78rem;color:var(--muted)">${escHtml(r.message || '')}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg, type) {
+  const el = document.createElement('div');
+  el.className = 'toast-msg' + (type ? ' ' + type : '');
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  requestAnimationFrame(() => { requestAnimationFrame(() => el.classList.add('in')); });
+  setTimeout(() => {
+    el.classList.remove('in');
+    setTimeout(() => el.remove(), 400);
+  }, 3800);
+}
+</script>
+</body>
+</html>

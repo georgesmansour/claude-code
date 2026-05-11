@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invitation Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #c9a96e; --gold-light: #e8d5b0; --gold-dark: #9a7a4a;
+    --bg: #0e0c0b; --panel: #181513; --panel-2: #221d19;
+    --border: rgba(201,169,110,.18); --border-strong: rgba(201,169,110,.4);
+    --white: #ffffff; --text: rgba(255,255,255,.85); --muted: rgba(255,255,255,.5);
+    --danger: #d96666; --success: #6ed68a;
+  }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Jost', sans-serif; min-height: 100vh; }
+  a { color: var(--gold-light); }
+
+  /* LOGIN */
+  #login { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+  .login-card { width: 90%; max-width: 380px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 2.5rem 2rem; text-align: center; }
+  .login-card h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 300; color: var(--gold); margin-bottom: .25rem; }
+  .login-card p { font-size: .8rem; color: var(--muted); margin-bottom: 1.5rem; }
+  .login-card input { width: 100%; padding: .8rem 1rem; background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 4px; color: var(--white); font-size: .9rem; outline: none; margin-bottom: 1rem; font-family: inherit; }
+  .login-card input:focus { border-color: var(--gold); }
+  .login-card button { width: 100%; padding: .8rem; background: linear-gradient(135deg, var(--gold-dark), var(--gold)); border: none; border-radius: 4px; color: var(--bg); font-family: inherit; font-size: .8rem; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; }
+  .login-card button:disabled { opacity: .5; cursor: default; }
+  .login-card .err { color: var(--danger); font-size: .75rem; margin-bottom: .5rem; min-height: 1em; }
+  .login-card .api-note { margin-top: 1rem; font-size: .65rem; color: var(--muted); word-break: break-all; }
+
+  /* TOPBAR */
+  .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 12px; }
+  .topbar h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 300; color: var(--gold); }
+  .topbar .tabs { display: flex; gap: 4px; }
+  .tab { padding: .5rem 1rem; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--muted); cursor: pointer; font-family: inherit; font-size: .75rem; letter-spacing: 2px; text-transform: uppercase; transition: all .2s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: rgba(201,169,110,.1); color: var(--gold-light); border-color: var(--border); }
+  .topbar .actions { display: flex; gap: 8px; }
+  .topbar .user { font-size: .75rem; color: var(--muted); }
+  .topbar .user strong { color: var(--gold-light); }
+
+  /* LAYOUT */
+  .container { display: grid; grid-template-columns: 320px 1fr; gap: 0; min-height: calc(100vh - 64px); }
+  @media (max-width: 800px) { .container { grid-template-columns: 1fr; } }
+
+  /* SIDEBAR */
+  .sidebar { background: var(--panel); border-right: 1px solid var(--border); padding: 1rem; overflow-y: auto; max-height: calc(100vh - 64px); }
+  .search-row { display: flex; gap: 6px; margin-bottom: .8rem; }
+  .search-row input { flex: 1; padding: .55rem .7rem; background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 4px; color: var(--white); font-size: .8rem; outline: none; font-family: inherit; }
+  .search-row input:focus { border-color: var(--gold); }
+  .person-list { display: flex; flex-direction: column; gap: 4px; }
+  .person-item { padding: .7rem .8rem; background: rgba(255,255,255,.02); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; transition: all .2s; display: flex; flex-direction: column; gap: 4px; }
+  .person-item:hover { background: rgba(201,169,110,.05); border-color: var(--border-strong); }
+  .person-item.active { background: rgba(201,169,110,.1); border-color: var(--gold); }
+  .person-name { font-size: .9rem; color: var(--white); }
+  .person-meta { font-size: .65rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; display: flex; gap: 8px; align-items: center; }
+  .badge-status { font-size: .55rem; padding: 1px 6px; border-radius: 2px; letter-spacing: 1px; }
+  .badge-draft { background: rgba(255,255,255,.05); color: var(--muted); border: 1px solid rgba(255,255,255,.1); }
+  .badge-published { background: rgba(110,214,138,.1); color: var(--success); border: 1px solid rgba(110,214,138,.3); }
+  .badge-archived { background: rgba(217,102,102,.1); color: var(--danger); border: 1px solid rgba(217,102,102,.3); }
+  .empty-state { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: .8rem; }
+
+  /* EDITOR */
+  .editor { padding: 1.5rem; overflow-y: auto; max-height: calc(100vh - 64px); }
+  .editor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; gap: 12px; flex-wrap: wrap; }
+  .editor-title-input { flex: 1; min-width: 200px; background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--white); font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 300; padding: .3rem 0; outline: none; }
+  .editor-title-input:focus { border-color: var(--gold); }
+  .header-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .section { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem; overflow: hidden; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; padding: .9rem 1.2rem; background: var(--panel-2); border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+  .section-header h2 { font-size: .8rem; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); font-weight: 500; }
+  .section-controls { display: flex; align-items: center; gap: 12px; }
+
+  .toggle { position: relative; display: inline-block; width: 36px; height: 20px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: rgba(255,255,255,.1); transition: .25s; border-radius: 20px; }
+  .toggle-slider::before { content: ''; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px; background: var(--white); transition: .25s; border-radius: 50%; }
+  .toggle input:checked + .toggle-slider { background: var(--gold); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+  .chev { color: var(--muted); transition: transform .2s; }
+  .section.collapsed .chev { transform: rotate(-90deg); }
+  .section.collapsed .section-body { display: none; }
+  .section.disabled .section-body { opacity: .4; pointer-events: none; }
+
+  .section-body { padding: 1.2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .section-body { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { font-size: .65rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .field input, .field textarea, .field select { padding: .6rem .85rem; background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 4px; color: var(--white); font-family: inherit; font-size: .85rem; outline: none; resize: vertical; }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--gold); }
+  .field textarea { min-height: 70px; }
+  .field-help { font-size: .65rem; color: var(--muted); margin-top: 2px; }
+
+  .img-preview { width: 100%; max-height: 140px; object-fit: cover; border-radius: 4px; margin-top: 6px; border: 1px solid var(--border); }
+
+  .item-list { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; }
+  .item-card { background: rgba(255,255,255,.025); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; }
+  .item-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; }
+  .item-card-title { font-size: .7rem; letter-spacing: 2px; text-transform: uppercase; color: var(--gold-light); }
+  .item-card-controls { display: flex; gap: 4px; }
+  .item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 600px) { .item-grid { grid-template-columns: 1fr; } }
+  .item-grid .full { grid-column: 1 / -1; }
+
+  .add-btn { grid-column: 1 / -1; padding: .7rem; background: transparent; border: 1px dashed var(--border-strong); border-radius: 4px; color: var(--gold-light); font-family: inherit; font-size: .75rem; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all .2s; }
+  .add-btn:hover { background: rgba(201,169,110,.06); border-color: var(--gold); }
+
+  .btn { padding: .55rem 1rem; border: 1px solid var(--border-strong); background: transparent; color: var(--gold-light); border-radius: 4px; cursor: pointer; font-family: inherit; font-size: .7rem; letter-spacing: 2px; text-transform: uppercase; transition: all .2s; }
+  .btn:hover { background: rgba(201,169,110,.08); border-color: var(--gold); color: var(--white); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn-primary { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); border: none; color: var(--bg); font-weight: 500; }
+  .btn-primary:hover { opacity: .85; }
+  .btn-danger { color: var(--danger); border-color: rgba(217,102,102,.4); }
+  .btn-danger:hover { background: rgba(217,102,102,.1); border-color: var(--danger); color: var(--danger); }
+  .btn-success { color: var(--success); border-color: rgba(110,214,138,.4); }
+  .btn-success:hover { background: rgba(110,214,138,.1); }
+  .btn-ghost { border-color: var(--border); color: var(--muted); }
+  .btn-icon { padding: .35rem .55rem; font-size: .9rem; min-width: 32px; background: rgba(255,255,255,.04); }
+
+  .footer-actions { position: sticky; bottom: 0; margin-top: 1.5rem; padding: 1rem 0; background: linear-gradient(to top, var(--bg) 70%, rgba(14,12,11,0)); display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; padding: 1.5rem; }
+  .template-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; }
+  .template-card h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 400; color: var(--gold-light); margin-bottom: .3rem; }
+  .template-card .desc { font-size: .8rem; color: var(--muted); margin-bottom: .8rem; min-height: 2.2em; }
+  .template-card .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .badge { font-size: .6rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold); background: rgba(201,169,110,.08); padding: 3px 8px; border-radius: 2px; border: 1px solid var(--border); }
+  .template-card .row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .panel { padding: 1.5rem; max-width: 800px; }
+  .block { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; margin-bottom: 1rem; }
+  .block h2 { font-size: .8rem; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 1rem; }
+
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--gold); color: var(--white); padding: .7rem 1.4rem; border-radius: 4px; font-size: .8rem; box-shadow: 0 8px 30px rgba(0,0,0,.6); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 200; }
+  #toast.show { opacity: 1; }
+  #toast.error { border-color: var(--danger); }
+  #toast.success { border-color: var(--success); }
+
+  .url-row { display: flex; gap: 6px; align-items: stretch; background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .url-row input { flex: 1; background: transparent; border: none; color: var(--gold-light); font-family: 'Jost', monospace; font-size: .75rem; padding: .55rem .8rem; outline: none; }
+  .url-row .btn { border-radius: 0; border: none; border-left: 1px solid var(--border); padding: .55rem .9rem; }
+
+  .pill { display: inline-block; font-size: .6rem; letter-spacing: 1.5px; text-transform: uppercase; background: rgba(201,169,110,.15); color: var(--gold-light); padding: 3px 8px; border-radius: 2px; border: 1px solid var(--border); }
+  .hidden { display: none !important; }
+
+  .rsvp-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  .rsvp-table th, .rsvp-table td { padding: .6rem .8rem; text-align: left; border-bottom: 1px solid var(--border); }
+  .rsvp-table th { font-size: .65rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  .rsvp-table tr:hover { background: rgba(255,255,255,.02); }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .stat-card { background: rgba(255,255,255,.02); border: 1px solid var(--border); border-radius: 4px; padding: .9rem; }
+  .stat-num { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; color: var(--white); }
+  .stat-label { font-size: .65rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="login">
+  <div class="login-card">
+    <h1>✦ Admin Login</h1>
+    <p>Sign in to manage invitations</p>
+    <div class="err" id="login-err"></div>
+    <input type="email" id="login-email" placeholder="Email" autocomplete="username" autofocus>
+    <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+    <button id="login-btn" onclick="login()">Sign in</button>
+    <p class="api-note">API: <span id="api-endpoint"></span></p>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app" class="hidden">
+  <div class="topbar">
+    <h1>✦ Invitation Admin</h1>
+    <div class="tabs">
+      <button class="tab active" data-tab="invitations">Invitations</button>
+      <button class="tab" data-tab="templates">Templates</button>
+      <button class="tab" data-tab="rsvps">RSVPs</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </div>
+    <div class="user">Signed in as <strong id="user-name">—</strong></div>
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- INVITATIONS TAB -->
+  <div id="tab-invitations" class="container">
+    <aside class="sidebar">
+      <div class="search-row">
+        <input type="text" id="search" placeholder="Search…" oninput="renderInvitationList()">
+        <button class="btn btn-primary" onclick="newInvitation()">+ New</button>
+      </div>
+      <div class="person-list" id="invitationList"></div>
+    </aside>
+    <main class="editor" id="editor">
+      <div class="empty-state">Select an invitation, or click <strong>+ New</strong> to create one.</div>
+    </main>
+  </div>
+
+  <!-- TEMPLATES TAB -->
+  <div id="tab-templates" class="hidden">
+    <div class="template-grid" id="templateGrid"></div>
+  </div>
+
+  <!-- RSVPs TAB -->
+  <div id="tab-rsvps" class="hidden">
+    <div class="panel" style="max-width: none;">
+      <div class="block">
+        <h2>RSVPs by Invitation</h2>
+        <select id="rsvp-invitation-select" class="field" style="padding: .55rem .85rem; max-width: 400px;" onchange="loadRsvps()">
+          <option value="">— Select an invitation —</option>
+        </select>
+        <div id="rsvp-stats" style="margin-top: 1.2rem;"></div>
+        <div id="rsvp-list" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div id="tab-settings" class="hidden">
+    <div class="panel">
+      <div class="block">
+        <h2>API Endpoint</h2>
+        <p style="font-size:.8rem; color:var(--muted); margin-bottom:1rem;">Currently pointing at the address below. To change, set <code>window.API_BASE</code> before this page loads.</p>
+        <div id="settings-api"></div>
+      </div>
+      <div class="block">
+        <h2>About</h2>
+        <p style="font-size:.8rem; color:var(--muted);">Data is stored in a Postgres database (Neon) via the .NET API. The public site loads invitations from <code>/api/public/invitations/&lt;slug&gt;</code>; the admin uses <code>/api/admin/*</code> with a JWT token.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════════════
+const API_BASE = (window.API_BASE || '').replace(/\/$/, '');
+const TOKEN_KEY = 'ic_admin_token';
+const USER_KEY  = 'ic_admin_user';
+
+// ════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════
+let invitations = [];
+let templates   = [];
+let currentId   = null;
+let currentInv  = null;     // full editing object loaded from API
+let currentTab  = 'invitations';
+let dirty       = false;
+
+// ════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+function slugify(s) {
+  return String(s).toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
+    || 'inv-' + Date.now().toString(36);
+}
+
+function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+function toast(msg, kind = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + kind;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.className = '', 2000);
+}
+
+function copy(text) {
+  navigator.clipboard?.writeText(text).then(() => toast('Copied', 'success'));
+}
+
+function publicBase() {
+  return location.href.replace(/[^/]*$/, '') + 'index.html';
+}
+
+// ════════════════════════════════════════════════════════
+// API CLIENT
+// ════════════════════════════════════════════════════════
+async function api(method, path, body) {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  const headers = { 'Accept': 'application/json' };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
+  let res;
+  try {
+    res = await fetch(API_BASE + path, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined
+    });
+  } catch (e) {
+    throw new Error('Network error: cannot reach the API at ' + (API_BASE || location.origin));
+  }
+
+  if (res.status === 401) {
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
+    showLogin();
+    throw new Error('Session expired. Please sign in again.');
+  }
+  if (res.status === 204) return null;
+
+  let data = null;
+  const ct = res.headers.get('content-type') || '';
+  if (ct.includes('application/json')) data = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    const msg = (data && (data.error || data.title)) || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// ════════════════════════════════════════════════════════
+// LOGIN
+// ════════════════════════════════════════════════════════
+function showLogin() {
+  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('api-endpoint').textContent = API_BASE || location.origin;
+  document.getElementById('login-password').value = '';
+}
+
+function showApp() {
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  const u = JSON.parse(sessionStorage.getItem(USER_KEY) || '{}');
+  document.getElementById('user-name').textContent = u.fullName || u.email || '—';
+  bootApp();
+}
+
+async function login() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  if (!email || !password) { err.textContent = 'Email and password are required.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const res = await api('POST', '/api/auth/admin/login', { email, password });
+    sessionStorage.setItem(TOKEN_KEY, res.token);
+    sessionStorage.setItem(USER_KEY, JSON.stringify({ email, fullName: res.fullName, role: res.role }));
+    showApp();
+  } catch (e) {
+    err.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+}
+
+function logout() {
+  if (dirty && !confirm('Discard unsaved changes and log out?')) return;
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  currentId = null; currentInv = null; dirty = false;
+  showLogin();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !document.getElementById('login').classList.contains('hidden')) login();
+});
+
+// ════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════
+async function bootApp() {
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+  document.getElementById('settings-api').textContent = API_BASE || location.origin;
+  await refreshInvitations();
+  await refreshTemplates();
+  populateRsvpSelect();
+  window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  ['invitations', 'templates', 'rsvps', 'settings'].forEach(t =>
+    document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab));
+  if (tab === 'templates') renderTemplates();
+  if (tab === 'rsvps') populateRsvpSelect();
+}
+
+// ════════════════════════════════════════════════════════
+// INVITATIONS LIST
+// ════════════════════════════════════════════════════════
+async function refreshInvitations() {
+  try {
+    invitations = await api('GET', '/api/admin/invitations');
+    renderInvitationList();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function renderInvitationList() {
+  const q = (document.getElementById('search')?.value || '').toLowerCase().trim();
+  const c = document.getElementById('invitationList');
+  const list = invitations.filter(i =>
+    !q || i.title.toLowerCase().includes(q) || i.slug.toLowerCase().includes(q));
+  if (!list.length) {
+    c.innerHTML = `<div class="empty-state">${q ? 'No matches.' : 'No invitations yet. Click <strong>+ New</strong>.'}</div>`;
+    return;
+  }
+  c.innerHTML = list.map(p => `
+    <div class="person-item ${p.id === currentId ? 'active' : ''}" onclick="selectInvitation('${esc(p.id)}')">
+      <div class="person-name">${esc(p.title)}</div>
+      <div class="person-meta">
+        <span class="badge-status badge-${p.status.toLowerCase()}">${esc(p.status)}</span>
+        <span>?id=${esc(p.slug)}</span>
+        <span>· ${p.rsvpCount} rsvp${p.rsvpCount === 1 ? '' : 's'}</span>
+      </div>
+    </div>`).join('');
+}
+
+async function selectInvitation(id) {
+  if (dirty && currentId !== id && !confirm('Discard unsaved changes?')) return;
+  currentId = id; dirty = false;
+  renderInvitationList();
+  try {
+    currentInv = await api('GET', `/api/admin/invitations/${id}`);
+    renderEditor();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function newInvitation() {
+  if (dirty && !confirm('Discard unsaved changes?')) return;
+
+  // pick a template (default: first one)
+  if (!templates.length) await refreshTemplates();
+  if (!templates.length) { toast('No templates available', 'error'); return; }
+  const tpl = templates[0];
+
+  const title = prompt('Title for this invitation (e.g. "Charbel & Marianne"):');
+  if (!title) return;
+  const slug = slugify(title);
+  try {
+    const data = clone(tpl.data);
+    data.title = title;
+    if (data.cover) data.cover.names = title;
+    const created = await api('POST', '/api/admin/invitations', {
+      title, slug, templateId: tpl.id, eventDate: data.countdown?.date || null, data
+    });
+    await refreshInvitations();
+    selectInvitation(created.id);
+    toast('Invitation created', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════
+// EDITOR
+// ════════════════════════════════════════════════════════
+function renderEditor() {
+  const el = document.getElementById('editor');
+  if (!currentInv) {
+    el.innerHTML = '<div class="empty-state">Select an invitation, or click <strong>+ New</strong>.</div>';
+    return;
+  }
+  const inv = currentInv;
+  const d = inv.data;
+  const publicUrl = `${publicBase()}?id=${encodeURIComponent(inv.slug)}`;
+
+  el.innerHTML = `
+    <div class="editor-header">
+      <input class="editor-title-input" id="ed-title" value="${esc(inv.title)}" oninput="onTitleChange(this.value)">
+      <span class="pill">${esc(inv.status)}</span>
+      <div class="header-actions">
+        <button class="btn" onclick="window.open('${esc(publicUrl)}','_blank')">Preview</button>
+        ${inv.status === 'Published'
+          ? `<button class="btn btn-ghost" onclick="unpublishInvitation()">Unpublish</button>`
+          : `<button class="btn btn-success" onclick="publishInvitation()">Publish</button>`}
+        <button class="btn btn-danger" onclick="deleteInvitation()">Delete</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><h2>Public Link</h2></div>
+      <div class="section-body" style="grid-template-columns: 1fr;">
+        <div class="field full">
+          <label>URL (only works once published)</label>
+          <div class="url-row">
+            <input id="url-public" value="${esc(publicUrl)}" readonly>
+            <button class="btn" onclick="copy(document.getElementById('url-public').value)">Copy</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Slug (for URL)</label>
+          <input data-bind="slug" value="${esc(inv.slug)}" oninput="onFieldChange(this)">
+        </div>
+        <div class="field">
+          <label>Event date</label>
+          <input type="date" data-bind="eventDate" value="${esc((inv.eventDate || '').slice(0, 10))}" oninput="onFieldChange(this)">
+        </div>
+        <div class="field">
+          <label>Max attendees per RSVP</label>
+          <input type="number" min="1" data-bind="maxAttendees" value="${esc(inv.maxAttendees)}" oninput="onFieldChange(this)">
+        </div>
+      </div>
+    </div>
+
+    <div id="client-account-card"></div>
+
+    ${renderSection('cover', 'Cover Page', d.cover, [
+      { key: 'eventLabel', label: 'Event type' },
+      { key: 'names', label: 'Couple / host names' },
+      { key: 'tagline', label: 'Tagline' },
+      { key: 'buttonText', label: 'Open button text' },
+      { key: 'hostIntro', label: 'Host intro line' },
+      { key: 'hostOutro', label: 'Host outro line' },
+      { key: 'hostText', label: 'Hosting families', full: true },
+      { key: 'image', label: 'Cover image URL', full: true, image: true }
+    ])}
+
+    ${renderSection('countdown', 'Date & Countdown', d.countdown, [
+      { key: 'label', label: 'Section label' },
+      { key: 'date', label: 'Event date', type: 'date' },
+      { key: 'description', label: 'Description', full: true, type: 'textarea' },
+      { key: 'image', label: 'Background image URL', full: true, image: true }
+    ])}
+
+    ${renderLocations(d.locations)}
+    ${renderGifts(d.gifts)}
+    ${renderCustomSections(d.customSections || [])}
+    ${renderRsvp(d.rsvp)}
+
+    <div class="footer-actions">
+      <button class="btn btn-primary" onclick="saveCurrent()">Save</button>
+      <button class="btn" onclick="reloadCurrent()">Discard changes</button>
+    </div>
+  `;
+
+  // wire scalar fields
+  el.querySelectorAll('[data-bind]').forEach(input => {
+    input.addEventListener('input', () => {
+      const k = input.dataset.bind;
+      const val = input.type === 'number' ? Number(input.value) : input.value;
+      if (k === 'slug' || k === 'eventDate' || k === 'maxAttendees') inv[k] = val;
+      dirty = true;
+      if (input.dataset.preview) {
+        const img = document.getElementById(input.dataset.preview);
+        if (img) img.src = val;
+      }
+    });
+  });
+
+  // wire scalar fields in sections (they use "section.key" path on data)
+  el.querySelectorAll('[data-section-bind]').forEach(input => {
+    input.addEventListener('input', () => {
+      const [sec, key] = input.dataset.sectionBind.split('.');
+      d[sec] = d[sec] || {};
+      d[sec][key] = input.type === 'number' ? Number(input.value) : input.value;
+      dirty = true;
+      if (input.dataset.preview) {
+        const img = document.getElementById(input.dataset.preview);
+        if (img) img.src = input.value;
+      }
+    });
+  });
+
+  renderClientAccountCard();
+}
+
+function onTitleChange(val) {
+  if (!currentInv) return;
+  currentInv.title = val;
+  if (currentInv.data.cover) currentInv.data.cover.names = val;
+  dirty = true;
+}
+function onFieldChange() { dirty = true; }
+
+// ── Section renderers ───────────────────────────────────
+function renderSection(key, title, obj, fields) {
+  if (!obj) obj = { enabled: true };
+  const fieldHtml = fields.map(f => fieldHtmlFor(f, obj, key)).join('');
+  return `
+    <div class="section ${obj.enabled === false ? 'disabled' : ''}" id="sec-${key}">
+      <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
+        <h2>${esc(title)}</h2>
+        <div class="section-controls">
+          <label class="toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" ${obj.enabled !== false ? 'checked' : ''} onchange="toggleSection('${esc(key)}', this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="chev">▾</span>
+        </div>
+      </div>
+      <div class="section-body">${fieldHtml}</div>
+    </div>`;
+}
+
+function fieldHtmlFor(f, obj, sectionKey) {
+  const path = `${sectionKey}.${f.key}`;
+  const val  = obj[f.key] == null ? '' : obj[f.key];
+  const id   = `f-${sectionKey}-${f.key}`;
+  let input;
+  if (f.type === 'textarea') input = `<textarea id="${id}" data-section-bind="${path}">${esc(val)}</textarea>`;
+  else if (f.type === 'date') input = `<input id="${id}" type="date" data-section-bind="${path}" value="${esc(val)}">`;
+  else if (f.type === 'number') input = `<input id="${id}" type="number" data-section-bind="${path}" value="${esc(val)}">`;
+  else input = `<input id="${id}" type="text" data-section-bind="${path}" value="${esc(val)}"${f.image ? ` data-preview="${id}-prev"` : ''}>`;
+  return `<div class="field ${f.full ? 'full' : ''}">
+    <label for="${id}">${esc(f.label)}</label>
+    ${input}
+    ${f.image ? `<img id="${id}-prev" class="img-preview" src="${esc(val)}" onerror="this.style.display='none'" onload="this.style.display='block'">` : ''}
+  </div>`;
+}
+
+function toggleSection(key, enabled) {
+  const d = currentInv.data;
+  if (key.startsWith('custom-')) {
+    d.customSections[parseInt(key.split('-')[1])].enabled = enabled;
+  } else {
+    d[key] = d[key] || {};
+    d[key].enabled = enabled;
+  }
+  dirty = true;
+  document.getElementById('sec-' + key).classList.toggle('disabled', !enabled);
+}
+
+function renderLocations(L) {
+  if (!L) L = { enabled: true, items: [] };
+  const items = (L.items || []).map((loc, i) => `
+    <div class="item-card">
+      <div class="item-card-header">
+        <span class="item-card-title">Location ${i + 1}</span>
+        <div class="item-card-controls">
+          <button class="btn btn-icon" onclick="moveItem('locations',${i},-1)">↑</button>
+          <button class="btn btn-icon" onclick="moveItem('locations',${i},1)">↓</button>
+          <button class="btn btn-icon btn-danger" onclick="removeItem('locations',${i})">✕</button>
+        </div>
+      </div>
+      <div class="item-grid">
+        <div class="field"><label>Time / Type</label><input data-item="locations.${i}.time" value="${esc(loc.time)}"></div>
+        <div class="field"><label>Name</label><input data-item="locations.${i}.name" value="${esc(loc.name)}"></div>
+        <div class="field full"><label>Address</label><input data-item="locations.${i}.addr" value="${esc(loc.addr)}"></div>
+        <div class="field full"><label>Maps URL</label><input data-item="locations.${i}.url" value="${esc(loc.url)}"></div>
+      </div>
+    </div>`).join('');
+  return `
+    <div class="section ${L.enabled === false ? 'disabled' : ''}" id="sec-locations">
+      <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
+        <h2>Locations</h2>
+        <div class="section-controls">
+          <label class="toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" ${L.enabled !== false ? 'checked' : ''} onchange="toggleSection('locations', this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="chev">▾</span>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="field"><label>Section label</label><input data-section-bind="locations.label" value="${esc(L.label)}"></div>
+        <div class="field"><label>Section title</label><input data-section-bind="locations.title" value="${esc(L.title)}"></div>
+        <div class="field full"><label>Background image URL</label><input data-section-bind="locations.image" data-preview="loc-img-prev" value="${esc(L.image)}"><img id="loc-img-prev" class="img-preview" src="${esc(L.image)}" onerror="this.style.display='none'" onload="this.style.display='block'"></div>
+        <div class="item-list">${items}</div>
+        <button class="add-btn" onclick="addItem('locations', { time:'', name:'', addr:'', url:'' })">+ Add location</button>
+      </div>
+    </div>`;
+}
+
+function renderGifts(G) {
+  if (!G) G = { enabled: false, items: [] };
+  const items = (G.items || []).map((g, i) => `
+    <div class="item-card">
+      <div class="item-card-header">
+        <span class="item-card-title">Account ${i + 1}</span>
+        <div class="item-card-controls">
+          <button class="btn btn-icon" onclick="moveItem('gifts',${i},-1)">↑</button>
+          <button class="btn btn-icon" onclick="moveItem('gifts',${i},1)">↓</button>
+          <button class="btn btn-icon btn-danger" onclick="removeItem('gifts',${i})">✕</button>
+        </div>
+      </div>
+      <div class="item-grid">
+        <div class="field"><label>Bank / wallet name</label><input data-item="gifts.${i}.bank" value="${esc(g.bank)}"></div>
+        <div class="field"><label>Account / IBAN / number</label><input data-item="gifts.${i}.account" value="${esc(g.account)}"></div>
+      </div>
+    </div>`).join('');
+  return `
+    <div class="section ${G.enabled === false ? 'disabled' : ''}" id="sec-gifts">
+      <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
+        <h2>Gift Registry <span class="pill" style="margin-left:8px;">Optional</span></h2>
+        <div class="section-controls">
+          <label class="toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" ${G.enabled !== false ? 'checked' : ''} onchange="toggleSection('gifts', this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="chev">▾</span>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="field"><label>Section label</label><input data-section-bind="gifts.label" value="${esc(G.label)}"></div>
+        <div class="field"><label>Section title</label><input data-section-bind="gifts.title" value="${esc(G.title)}"></div>
+        <div class="field full"><label>Description</label><textarea data-section-bind="gifts.description">${esc(G.description)}</textarea></div>
+        <div class="field full"><label>Background image URL</label><input data-section-bind="gifts.image" data-preview="gift-img-prev" value="${esc(G.image)}"><img id="gift-img-prev" class="img-preview" src="${esc(G.image)}" onerror="this.style.display='none'" onload="this.style.display='block'"></div>
+        <div class="item-list">${items}</div>
+        <button class="add-btn" onclick="addItem('gifts', { bank:'', account:'' })">+ Add account</button>
+        <p class="field-help" style="grid-column:1/-1;">Disable the whole section if your customer doesn't want to share any account.</p>
+      </div>
+    </div>`;
+}
+
+function renderCustomSections(arr) {
+  const items = arr.map((s, i) => `
+    <div class="section ${s.enabled === false ? 'disabled' : ''}" id="sec-custom-${i}">
+      <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
+        <h2>Custom Page ${i + 1}${s.title ? ' — ' + esc(s.title) : ''}</h2>
+        <div class="section-controls">
+          <label class="toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" ${s.enabled !== false ? 'checked' : ''} onchange="toggleSection('custom-${i}', this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <button class="btn btn-icon" onclick="event.stopPropagation(); moveCustom(${i}, -1)">↑</button>
+          <button class="btn btn-icon" onclick="event.stopPropagation(); moveCustom(${i}, 1)">↓</button>
+          <button class="btn btn-icon btn-danger" onclick="event.stopPropagation(); removeCustom(${i})">✕</button>
+          <span class="chev">▾</span>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="field"><label>Small label (optional)</label><input data-item="customSections.${i}.label" value="${esc(s.label)}"></div>
+        <div class="field"><label>Title</label><input data-item="customSections.${i}.title" value="${esc(s.title)}"></div>
+        <div class="field full"><label>Body text</label><textarea data-item="customSections.${i}.body">${esc(s.body)}</textarea></div>
+        <div class="field full"><label>Background image URL</label><input data-item="customSections.${i}.image" value="${esc(s.image)}"></div>
+      </div>
+    </div>`).join('');
+  return `${items}
+    <button class="add-btn" style="margin-bottom:1rem;" onclick="addCustomSection()">+ Add custom page</button>`;
+}
+
+function renderRsvp(R) {
+  if (!R) R = { enabled: true };
+  return renderSection('rsvp', 'RSVP', R, [
+    { key: 'label', label: 'Section label' },
+    { key: 'title', label: 'Section title' },
+    { key: 'deadline', label: 'Deadline text', full: true },
+    { key: 'image', label: 'Background image URL', full: true, image: true }
+  ]);
+}
+
+// dynamic items handler
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (!t.dataset.item || !currentInv) return;
+  const path = t.dataset.item.split('.');
+  const sec  = path[0];
+  const idx  = parseInt(path[1]);
+  const key  = path[2];
+  const d = currentInv.data;
+  d[sec] = d[sec] || (sec === 'customSections' ? [] : { items: [] });
+  if (sec === 'customSections') d[sec][idx][key] = t.value;
+  else { d[sec].items = d[sec].items || []; d[sec].items[idx][key] = t.value; }
+  dirty = true;
+});
+
+function addItem(section, blank) {
+  const d = currentInv.data;
+  d[section] = d[section] || { enabled: true, items: [] };
+  d[section].items = d[section].items || [];
+  d[section].items.push(blank);
+  dirty = true; renderEditor();
+}
+function removeItem(section, idx) {
+  currentInv.data[section].items.splice(idx, 1);
+  dirty = true; renderEditor();
+}
+function moveItem(section, idx, dir) {
+  const arr = currentInv.data[section].items;
+  const j = idx + dir;
+  if (j < 0 || j >= arr.length) return;
+  [arr[idx], arr[j]] = [arr[j], arr[idx]];
+  dirty = true; renderEditor();
+}
+function addCustomSection() {
+  currentInv.data.customSections = currentInv.data.customSections || [];
+  currentInv.data.customSections.push({ enabled: true, label: '', title: 'New section', body: '', image: '' });
+  dirty = true; renderEditor();
+}
+function removeCustom(idx) {
+  if (!confirm('Remove this custom page?')) return;
+  currentInv.data.customSections.splice(idx, 1);
+  dirty = true; renderEditor();
+}
+function moveCustom(idx, dir) {
+  const arr = currentInv.data.customSections;
+  const j = idx + dir;
+  if (j < 0 || j >= arr.length) return;
+  [arr[idx], arr[j]] = [arr[j], arr[idx]];
+  dirty = true; renderEditor();
+}
+
+// ════════════════════════════════════════════════════════
+// SAVE / PUBLISH / DELETE
+// ════════════════════════════════════════════════════════
+async function saveCurrent() {
+  if (!currentInv) return;
+  try {
+    await api('PUT', `/api/admin/invitations/${currentInv.id}`, {
+      title: currentInv.title,
+      slug: currentInv.slug,
+      eventType: currentInv.eventType,
+      eventDate: currentInv.eventDate || null,
+      maxAttendees: currentInv.maxAttendees,
+      data: currentInv.data
+    });
+    dirty = false;
+    toast('Saved', 'success');
+    await refreshInvitations();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function reloadCurrent() {
+  if (!currentInv) return;
+  if (dirty && !confirm('Discard unsaved changes?')) return;
+  await selectInvitation(currentInv.id);
+}
+
+async function publishInvitation() {
+  if (!currentInv) return;
+  if (dirty && !confirm('You have unsaved changes. Save and publish?')) return;
+  try {
+    if (dirty) await api('PUT', `/api/admin/invitations/${currentInv.id}`, {
+      title: currentInv.title, slug: currentInv.slug, eventType: currentInv.eventType,
+      eventDate: currentInv.eventDate || null, maxAttendees: currentInv.maxAttendees, data: currentInv.data
+    });
+    await api('POST', `/api/admin/invitations/${currentInv.id}/publish`);
+    dirty = false;
+    toast('Published', 'success');
+    await refreshInvitations();
+    await selectInvitation(currentInv.id);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function unpublishInvitation() {
+  if (!currentInv) return;
+  if (!confirm('Unpublish this invitation? The public URL will stop working.')) return;
+  try {
+    await api('POST', `/api/admin/invitations/${currentInv.id}/unpublish`);
+    toast('Unpublished', 'success');
+    await refreshInvitations();
+    await selectInvitation(currentInv.id);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteInvitation() {
+  if (!currentInv) return;
+  if (!confirm(`Delete "${currentInv.title}" and all of its RSVPs? This cannot be undone.`)) return;
+  try {
+    await api('DELETE', `/api/admin/invitations/${currentInv.id}`);
+    currentId = null; currentInv = null; dirty = false;
+    await refreshInvitations();
+    renderEditor();
+    toast('Deleted', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════
+// CLIENT ACCOUNT (for the couple)
+// ════════════════════════════════════════════════════════
+async function renderClientAccountCard() {
+  const c = document.getElementById('client-account-card');
+  if (!currentInv) return;
+  c.innerHTML = '<div class="section"><div class="section-header"><h2>Client Account</h2></div><div class="section-body" style="grid-template-columns:1fr;">Loading…</div></div>';
+  try {
+    const client = await api('GET', `/api/admin/invitations/${currentInv.id}/client`);
+    c.innerHTML = renderExistingClient(client);
+  } catch (e) {
+    if (/HTTP 404|not found/i.test(e.message)) c.innerHTML = renderClientForm();
+    else c.innerHTML = '';
+  }
+}
+
+function renderClientForm() {
+  return `
+    <div class="section">
+      <div class="section-header"><h2>Client Account <span class="pill" style="margin-left:8px;">Not created yet</span></h2></div>
+      <div class="section-body">
+        <p class="field-help" style="grid-column:1/-1;">Create login credentials so the couple can view their dashboard. They'll be required to change the password on first login.</p>
+        <div class="field"><label>Email</label><input id="ca-email" type="email" placeholder="couple@example.com"></div>
+        <div class="field"><label>Phone (optional)</label><input id="ca-phone" type="tel"></div>
+        <div class="field"><label>Full name</label><input id="ca-name" placeholder="Charbel & Marianne"></div>
+        <div class="field"><label>Initial password</label><input id="ca-pw" type="text" value="${randomPw()}" oninput="this.dataset.dirty=1"></div>
+        <div class="field full" style="display:flex; gap:8px;">
+          <button class="btn btn-primary" onclick="createClient()">Create login</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function randomPw() {
+  const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+  let s = '';
+  for (let i = 0; i < 10; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+async function createClient() {
+  const email = document.getElementById('ca-email').value.trim();
+  const phone = document.getElementById('ca-phone').value.trim();
+  const name  = document.getElementById('ca-name').value.trim() || currentInv.title;
+  const pw    = document.getElementById('ca-pw').value;
+  if (!email || !pw) { toast('Email and password are required', 'error'); return; }
+  try {
+    await api('POST', '/api/admin/clients', {
+      invitationId: currentInv.id,
+      email, password: pw, fullName: name, phone: phone || null
+    });
+    toast('Client account created', 'success');
+    renderClientAccountCard();
+    alert(`Share these credentials with the couple:\n\nEmail:    ${email}\nPassword: ${pw}\n\nThey will be required to change the password on first login.`);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function renderExistingClient(c) {
+  return `
+    <div class="section">
+      <div class="section-header"><h2>Client Account</h2></div>
+      <div class="section-body">
+        <div class="field"><label>Email</label><input value="${esc(c.email)}" readonly></div>
+        <div class="field"><label>Full name</label><input value="${esc(c.fullName)}" readonly></div>
+        <div class="field"><label>Status</label><input value="${c.isActive ? 'Active' : 'Disabled'}" readonly></div>
+        <div class="field"><label>Last login</label><input value="${c.lastLoginAt ? new Date(c.lastLoginAt).toLocaleString() : 'Never'}" readonly></div>
+        ${c.mustChangePassword ? '<p class="field-help" style="grid-column:1/-1; color:var(--gold);">⚠ Couple has not changed their initial password yet.</p>' : ''}
+      </div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// TEMPLATES
+// ════════════════════════════════════════════════════════
+async function refreshTemplates() {
+  try { templates = await api('GET', '/api/admin/templates'); renderTemplates(); }
+  catch (e) { toast(e.message, 'error'); }
+}
+
+function renderTemplates() {
+  const c = document.getElementById('templateGrid');
+  if (!c) return;
+  c.innerHTML = templates.map(t => `
+    <div class="template-card">
+      <h3>${esc(t.name)}</h3>
+      <div class="badges">
+        ${t.isBuiltin ? '<span class="badge">Built-in</span>' : '<span class="badge">Custom</span>'}
+        <span class="badge">${countSections(t.data)} sections</span>
+      </div>
+      <p class="desc">${esc(t.description || '')}</p>
+      <div class="row">
+        <button class="btn btn-primary" onclick="newFromTemplate('${esc(t.id)}')">Use template</button>
+        ${t.isBuiltin ? '' : `<button class="btn btn-danger" onclick="deleteTemplate('${esc(t.id)}')">Delete</button>`}
+      </div>
+    </div>`).join('') || '<div class="empty-state" style="grid-column:1/-1;">No templates yet.</div>';
+}
+
+function countSections(d) {
+  let n = 0;
+  ['cover','countdown','locations','gifts','rsvp'].forEach(k => { if (d?.[k] && d[k].enabled !== false) n++; });
+  n += (d?.customSections || []).filter(s => s.enabled !== false).length;
+  return n;
+}
+
+async function newFromTemplate(id) {
+  const tpl = templates.find(t => t.id === id);
+  if (!tpl) return;
+  const title = prompt('Title for the new invitation:');
+  if (!title) return;
+  try {
+    const data = clone(tpl.data);
+    data.title = title;
+    if (data.cover) data.cover.names = title;
+    const res = await api('POST', '/api/admin/invitations', {
+      title, slug: slugify(title), templateId: tpl.id,
+      eventDate: data.countdown?.date || null, data
+    });
+    switchTab('invitations');
+    await refreshInvitations();
+    selectInvitation(res.id);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteTemplate(id) {
+  if (!confirm('Delete this template?')) return;
+  try { await api('DELETE', `/api/admin/templates/${id}`); refreshTemplates(); toast('Deleted', 'success'); }
+  catch (e) { toast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════
+// RSVP TAB
+// ════════════════════════════════════════════════════════
+function populateRsvpSelect() {
+  const sel = document.getElementById('rsvp-invitation-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Select an invitation —</option>' +
+    invitations.map(i => `<option value="${esc(i.id)}">${esc(i.title)} (${i.rsvpCount})</option>`).join('');
+}
+
+async function loadRsvps() {
+  const id = document.getElementById('rsvp-invitation-select').value;
+  const stats = document.getElementById('rsvp-stats');
+  const list  = document.getElementById('rsvp-list');
+  if (!id) { stats.innerHTML = ''; list.innerHTML = ''; return; }
+  try {
+    const rsvps = await api('GET', `/api/admin/invitations/${id}/rsvps`);
+    const yes = rsvps.filter(r => r.response === 'Yes');
+    const no  = rsvps.filter(r => r.response === 'No');
+    const may = rsvps.filter(r => r.response === 'Maybe');
+    const seats = yes.reduce((s, r) => s + r.partySize, 0);
+
+    stats.innerHTML = `
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-num">${rsvps.length}</div><div class="stat-label">Total responses</div></div>
+        <div class="stat-card"><div class="stat-num">${yes.length}</div><div class="stat-label">Attending</div></div>
+        <div class="stat-card"><div class="stat-num">${no.length}</div><div class="stat-label">Declined</div></div>
+        <div class="stat-card"><div class="stat-num">${may.length}</div><div class="stat-label">Maybe</div></div>
+        <div class="stat-card"><div class="stat-num">${seats}</div><div class="stat-label">Confirmed seats</div></div>
+      </div>`;
+    if (!rsvps.length) { list.innerHTML = '<div class="empty-state">No RSVPs yet.</div>'; return; }
+    list.innerHTML = `
+      <table class="rsvp-table">
+        <thead><tr><th>When</th><th>Response</th><th>Party</th><th>Guests</th><th>Contact</th></tr></thead>
+        <tbody>
+          ${rsvps.map(r => `
+            <tr>
+              <td>${new Date(r.createdAt).toLocaleString()}</td>
+              <td><span class="badge">${esc(r.response)}</span></td>
+              <td>${r.partySize}</td>
+              <td>${r.guests.map(g => esc(g.fullName)).join(', ') || '—'}</td>
+              <td>${esc(r.contactName || '')} ${r.contactEmail ? '· ' + esc(r.contactEmail) : ''}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('api-endpoint').textContent = API_BASE || location.origin;
+  if (sessionStorage.getItem(TOKEN_KEY)) showApp();
+  else showLogin();
+});
+</script>
+</body>
+</html>

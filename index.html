@@ -257,6 +257,16 @@
 </div>
 
 <script>
+// ── API CONFIG ─────────────────────────────────────────
+// Override at runtime by setting window.API_BASE before this script runs,
+// e.g.  <script>window.API_BASE = 'https://my-api.azurewebsites.net'</script>
+const API_BASE = (typeof window !== 'undefined' && window.API_BASE)
+  ? window.API_BASE.replace(/\/$/, '')
+  : '';   // empty = same-origin
+
+// State holding the slug of the currently-loaded invitation, used by RSVP submit.
+let CURRENT_SLUG = null;
+
 // ── DEFAULT DATA ───────────────────────────────────────
 const DEFAULT_DATA = {
   template: 'wedding-classic',
@@ -341,21 +351,38 @@ function parseQuery() {
   return new URLSearchParams(raw);
 }
 
-function loadData() {
+async function loadData() {
   const params = parseQuery();
 
+  // 1) ?d=<base64> still works — useful for offline previews from the admin
   const enc = params.get('d');
   if (enc) {
     try { return mergeDefaults(decodeData(enc)); }
     catch (e) { console.warn('Bad ?d payload:', e); }
   }
 
+  // 2) ?id=<slug> — fetch from the .NET API
   const id = params.get('id');
   if (id) {
+    CURRENT_SLUG = id;
+    try {
+      const res = await fetch(`${API_BASE}/api/public/invitations/${encodeURIComponent(id)}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const body = await res.json();
+        return mergeDefaults(body.data || {});
+      }
+      console.warn('API returned', res.status);
+    } catch (e) {
+      console.warn('API fetch failed:', e);
+    }
+
+    // Fallback to localStorage if the API is unreachable (offline editor preview)
     try {
       const all = JSON.parse(localStorage.getItem('ic_people') || '{}');
       if (all[id]) return mergeDefaults(all[id].data);
-    } catch (e) { console.warn('Bad localStorage:', e); }
+    } catch { /* ignore */ }
   }
 
   return JSON.parse(JSON.stringify(DEFAULT_DATA));
@@ -626,14 +653,44 @@ function buildNameFields(sel) {
   }
 }
 
-function submitRSVP(btn) {
+async function submitRSVP(btn) {
   const form = btn.closest('[data-rsvp]');
   const att = form.querySelector('[data-attending]').value;
   const num = form.querySelector('[data-num-attendees]').value;
   const names = [...form.querySelectorAll('.guest-name')].map(i => i.value.trim());
+
   if (!att) return alert('Please select your attendance.');
   if (att === 'yes' && !num) return alert('Please select number of attendees.');
   if (att === 'yes' && names.some(n => !n)) return alert('Please fill in all guest names.');
+
+  // Hit the .NET API if we have a slug; otherwise just show success (preview mode)
+  if (CURRENT_SLUG) {
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Submitting…';
+    try {
+      const res = await fetch(`${API_BASE}/api/public/invitations/${encodeURIComponent(CURRENT_SLUG)}/rsvp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          response: att,
+          partySize: att === 'yes' ? parseInt(num) : 0,
+          guests: (att === 'yes' ? names : []).map(n => ({ fullName: n }))
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        btn.disabled = false;
+        btn.textContent = original;
+        return alert(err.error || `Submission failed (${res.status}). Please try again.`);
+      }
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = original;
+      return alert('Network error. Please check your connection and try again.');
+    }
+  }
+
   form.style.display = 'none';
   form.parentElement.querySelector('[data-rsvp-success]').style.display = 'block';
 }
@@ -655,8 +712,13 @@ function setupSwipe() {
   }, { passive: true });
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  build(loadData());
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    build(await loadData());
+  } catch (e) {
+    console.error('Failed to load invitation data:', e);
+    build(JSON.parse(JSON.stringify(DEFAULT_DATA)));
+  }
   setupSwipe();
 });
 </script>
