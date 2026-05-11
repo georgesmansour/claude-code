@@ -85,12 +85,12 @@ public class AdminController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> ListInvitations()
     {
         var rows = await db.Invitations
+            .OrderByDescending(i => i.UpdatedAt)
             .Select(i => new InvitationListItem(
                 i.Id, i.Slug, i.Title, i.Status.ToString(),
                 i.EventDate,
                 i.Rsvps.Count,
                 i.UpdatedAt))
-            .OrderByDescending(i => i.UpdatedAt)
             .ToListAsync();
         return Ok(rows);
     }
@@ -107,7 +107,7 @@ public class AdminController(AppDbContext db) : ControllerBase
         return Ok(new InvitationFull(
             inv.Id, inv.Slug, inv.Title, inv.Status.ToString(),
             inv.EventType, inv.EventDate, inv.MaxAttendees, inv.TemplateId,
-            InvitationDataMapper.ToData(inv)));
+            inv.UpdatedAt, InvitationDataMapper.ToData(inv)));
     }
 
     [HttpPost("invitations")]

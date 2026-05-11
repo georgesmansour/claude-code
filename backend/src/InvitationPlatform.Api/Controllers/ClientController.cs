@@ -30,7 +30,7 @@ public class ClientController(AppDbContext db) : ControllerBase
         return Ok(new InvitationFull(
             inv.Id, inv.Slug, inv.Title, inv.Status.ToString(),
             inv.EventType, inv.EventDate, inv.MaxAttendees, inv.TemplateId,
-            InvitationDataMapper.ToData(inv)));
+            inv.UpdatedAt, InvitationDataMapper.ToData(inv)));
     }
 
     [HttpPut("invitation")]

@@ -99,7 +99,7 @@ public record InvitationListItem(
 public record InvitationFull(
     Guid Id, string Slug, string Title, string Status,
     string? EventType, DateTime? EventDate, int MaxAttendees,
-    Guid? TemplateId, InvitationData Data);
+    Guid? TemplateId, DateTime UpdatedAt, InvitationData Data);
 
 public record CreateInvitationRequest(
     string Title, string Slug, Guid? TemplateId,
