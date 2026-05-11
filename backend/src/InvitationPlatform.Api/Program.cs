@@ -1,3 +1,4 @@
+using Scalar.AspNetCore;
 using System.Security.Cryptography;
 using System.Text;
 using InvitationPlatform.Api.Auth;
@@ -150,7 +151,8 @@ using (var scope = app.Services.CreateScope())
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();   // OpenAPI document at /openapi/v1.json
+    app.MapOpenApi();
+    app.MapScalarApiReference();   // UI at /scalar/v1
 
     // Walk up 3 directories (Api → src → backend → repo root) to serve the HTML files.
     // Allows opening http://localhost:5000/admin.html without any extra config.
