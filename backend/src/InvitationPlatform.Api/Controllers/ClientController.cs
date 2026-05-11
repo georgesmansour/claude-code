@@ -95,13 +95,12 @@ public class ClientController(AppDbContext db) : ControllerBase
         var rsvps = await db.Rsvps.Where(r => r.InvitationId == CurrentInvitationId).ToListAsync();
         var attending = rsvps.Count(r => r.Response == RsvpResponse.Yes);
         var declined  = rsvps.Count(r => r.Response == RsvpResponse.No);
-        var maybe     = rsvps.Count(r => r.Response == RsvpResponse.Maybe);
         var seats     = rsvps.Where(r => r.Response == RsvpResponse.Yes).Sum(r => r.PartySize);
         var rate      = rsvps.Count == 0 ? 0 : Math.Round(attending * 100.0 / rsvps.Count, 1);
 
         return Ok(new DashboardSummary(
             inv.Id, inv.Slug, inv.Title, inv.EventDate, inv.MaxAttendees,
-            rsvps.Count, attending, declined, maybe, seats, rate));
+            rsvps.Count, attending, declined, seats, rate));
     }
 
     [HttpGet("dashboard/attendees")]
@@ -109,9 +108,12 @@ public class ClientController(AppDbContext db) : ControllerBase
     {
         var q = db.Rsvps.Include(r => r.Guests).Where(r => r.InvitationId == CurrentInvitationId);
 
-        if (!string.IsNullOrEmpty(response) &&
-            Enum.TryParse<RsvpResponse>(response, true, out var r))
+        if (!string.IsNullOrEmpty(response))
+        {
+            if (!Enum.TryParse<RsvpResponse>(response, true, out var r))
+                return BadRequest(new { error = "Response must be 'yes' or 'no'" });
             q = q.Where(x => x.Response == r);
+        }
 
         var rows = await q.OrderByDescending(x => x.CreatedAt).ToListAsync();
         return Ok(rows.Select(x => new RsvpDto(

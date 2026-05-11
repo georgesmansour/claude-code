@@ -155,4 +155,4 @@ public record DashboardSummary(
     Guid InvitationId, string Slug, string Title,
     DateTime? EventDate, int MaxAttendees,
     int TotalRsvps, int Attending, int Declined,
-    int Maybe, int TotalSeats, double AcceptRate);
+    int TotalSeats, double AcceptRate);

@@ -84,7 +84,7 @@
   .badge { display: inline-block; padding: .2rem .6rem; border-radius: 3px; font-size: .62rem; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; }
   .badge-yes { background: rgba(110,214,138,.12); color: var(--success); }
   .badge-no { background: rgba(217,102,102,.12); color: var(--danger); }
-  .badge-maybe { background: rgba(224,185,110,.12); color: var(--warn); }
+
   .guests-list { margin-top: .4rem; display: flex; flex-direction: column; gap: .2rem; }
   .guest-row { font-size: .72rem; color: var(--muted); }
 
@@ -204,7 +204,7 @@
         <div class="stat-card"><div class="val" id="statTotal">—</div><div class="lbl">Total RSVPs</div></div>
         <div class="stat-card green"><div class="val" id="statYes">—</div><div class="lbl">Attending</div></div>
         <div class="stat-card red"><div class="val" id="statNo">—</div><div class="lbl">Declined</div></div>
-        <div class="stat-card warn"><div class="val" id="statMaybe">—</div><div class="lbl">Maybe</div></div>
+
         <div class="stat-card"><div class="val" id="statSeats">—</div><div class="lbl">Total Seats</div></div>
         <div class="stat-card"><div class="val" id="statRate">—</div><div class="lbl">Accept Rate</div></div>
       </div>
@@ -216,7 +216,7 @@
           <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">All</button>
           <button class="filter-tab" data-filter="yes" onclick="setFilter('yes', this)">Attending</button>
           <button class="filter-tab" data-filter="no" onclick="setFilter('no', this)">Declined</button>
-          <button class="filter-tab" data-filter="maybe" onclick="setFilter('maybe', this)">Maybe</button>
+
         </div>
       </div>
 
@@ -431,7 +431,6 @@ async function loadDashboard() {
     document.getElementById('statTotal').textContent = summary.totalRsvps ?? '—';
     document.getElementById('statYes').textContent   = summary.attending  ?? '—';
     document.getElementById('statNo').textContent    = summary.declined   ?? '—';
-    document.getElementById('statMaybe').textContent = summary.maybe      ?? '—';
     document.getElementById('statSeats').textContent = summary.totalSeats ?? '—';
     document.getElementById('statRate').textContent  = summary.totalRsvps
       ? summary.acceptRate + '%' : '—';
@@ -479,7 +478,7 @@ function renderTable() {
 
   tbody.innerHTML = rows.map(r => {
     const resp = (r.response || '').toLowerCase();
-    const badgeCls = resp === 'yes' ? 'badge-yes' : resp === 'no' ? 'badge-no' : 'badge-maybe';
+    const badgeCls = resp === 'yes' ? 'badge-yes' : 'badge-no';
     const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 
     const guests = (r.guests || []).map(g => {

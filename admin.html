@@ -1017,7 +1017,6 @@ async function loadRsvps() {
     const rsvps = await api('GET', `/api/admin/invitations/${id}/rsvps`);
     const yes = rsvps.filter(r => r.response === 'Yes');
     const no  = rsvps.filter(r => r.response === 'No');
-    const may = rsvps.filter(r => r.response === 'Maybe');
     const seats = yes.reduce((s, r) => s + r.partySize, 0);
 
     stats.innerHTML = `
@@ -1025,7 +1024,6 @@ async function loadRsvps() {
         <div class="stat-card"><div class="stat-num">${rsvps.length}</div><div class="stat-label">Total responses</div></div>
         <div class="stat-card"><div class="stat-num">${yes.length}</div><div class="stat-label">Attending</div></div>
         <div class="stat-card"><div class="stat-num">${no.length}</div><div class="stat-label">Declined</div></div>
-        <div class="stat-card"><div class="stat-num">${may.length}</div><div class="stat-label">Maybe</div></div>
         <div class="stat-card"><div class="stat-num">${seats}</div><div class="stat-label">Confirmed seats</div></div>
       </div>`;
     if (!rsvps.length) { list.innerHTML = '<div class="empty-state">No RSVPs yet.</div>'; return; }

@@ -46,7 +46,7 @@ public class PublicController(AppDbContext db) : ControllerBase
         if (inv is null) return NotFound(new { error = "Invitation not found" });
 
         if (!Enum.TryParse<RsvpResponse>(req.Response, true, out var response))
-            return BadRequest(new { error = "Response must be 'yes', 'no', or 'maybe'" });
+            return BadRequest(new { error = "Response must be 'yes' or 'no'" });
 
         var rsvp = new Rsvp
         {
