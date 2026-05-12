@@ -502,9 +502,10 @@ function renderCustom(c) {
   `;
 }
 
-function renderRsvp(c, maxPeople) {
+function renderRsvp(c, maxPeople, npValue) {
   const opts = [];
-  for (let i = 1; i <= maxPeople; i++) opts.push(`<option value="${i}">${i}</option>`);
+  for (let i = 1; i <= maxPeople; i++) opts.push(`<option value="${i}"${i === npValue ? ' selected' : ''}>${i}</option>`);
+  const preYes = npValue > 0;
   return `
     <div class="bg-img" style="background-image: url('${esc(c.image)}')"></div>
     <div class="overlay deepest"></div>
@@ -517,7 +518,7 @@ function renderRsvp(c, maxPeople) {
           <label class="form-label">Attendance</label>
           <select class="form-select" data-attending>
             <option value="">— Select —</option>
-            <option value="yes">Yes, attending</option>
+            <option value="yes"${preYes ? ' selected' : ''}>Yes, attending</option>
             <option value="no">Not attending</option>
           </select>
         </div>
@@ -528,23 +529,14 @@ function renderRsvp(c, maxPeople) {
             ${opts.join('')}
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label">Your name</label>
-          <input class="form-input" data-contact-name type="text" placeholder="Full name">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email <span style="opacity:.5">(optional)</span></label>
-          <input class="form-input" data-contact-email type="email" placeholder="your@email.com">
-        </div>
+        <div data-name-fields></div>
         <div class="form-group">
           <label class="form-label">Phone <span style="opacity:.5">(optional)</span></label>
-          <input class="form-input" data-contact-phone type="tel" placeholder="+1 …">
+          <div style="display:flex;">
+            <span style="background:rgba(255,255,255,.04);border:1px solid rgba(201,169,110,.3);border-right:none;border-radius:4px 0 0 4px;padding:.6rem .8rem;font-size:.85rem;color:rgba(255,255,255,.65);display:flex;align-items:center;flex-shrink:0;">+961</span>
+            <input class="form-input" data-contact-phone type="tel" placeholder="71 234 567" style="border-radius:0 4px 4px 0;flex:1;min-width:0;">
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Message <span style="opacity:.5">(optional)</span></label>
-          <textarea class="form-input" data-contact-message rows="2" placeholder="A note for the couple…"></textarea>
-        </div>
-        <div data-name-fields></div>
         <button class="btn-submit" data-submit-rsvp>Confirm RSVP</button>
       </div>
       <div class="success-msg" data-rsvp-success>
@@ -585,13 +577,19 @@ function build(data) {
     if (type === 'locations')  el.innerHTML = renderLocations(cfg);
     if (type === 'gifts')      el.innerHTML = renderGifts(cfg);
     if (type === 'custom')     el.innerHTML = renderCustom(cfg);
-    if (type === 'rsvp')       el.innerHTML = renderRsvp(cfg, maxPeople);
+    if (type === 'rsvp')       el.innerHTML = renderRsvp(cfg, maxPeople, npOverride || 0);
     wrap.insertBefore(el, document.getElementById('dots'));
   });
 
   buildDots();
   startCountdown();
   document.title = (data.title || (data.cover && data.cover.names) || 'Invitation') + ' — Invitation';
+
+  // When np is pre-set, auto-populate the guest name fields immediately
+  if (npOverride > 0) {
+    const sel = document.querySelector('[data-num-attendees]');
+    if (sel) buildNameFields(sel);
+  }
 }
 
 function buildDots() {
@@ -672,16 +670,13 @@ function buildNameFields(sel) {
 
 async function submitRSVP(btn) {
   const form = btn.closest('[data-rsvp]');
-  const att         = form.querySelector('[data-attending]').value;
-  const num         = form.querySelector('[data-num-attendees]').value;
-  const names       = [...form.querySelectorAll('.guest-name')].map(i => i.value.trim());
-  const contactName  = form.querySelector('[data-contact-name]').value.trim();
-  const contactEmail = form.querySelector('[data-contact-email]').value.trim();
-  const contactPhone = form.querySelector('[data-contact-phone]').value.trim();
-  const message      = form.querySelector('[data-contact-message]').value.trim();
+  const att          = form.querySelector('[data-attending]').value;
+  const num          = form.querySelector('[data-num-attendees]').value;
+  const names        = [...form.querySelectorAll('.guest-name')].map(i => i.value.trim());
+  const phoneRaw     = form.querySelector('[data-contact-phone]').value.trim();
+  const contactPhone = phoneRaw ? '+961 ' + phoneRaw : null;
 
   if (!att) return alert('Please select your attendance.');
-  if (!contactName) return alert('Please enter your name.');
   if (att === 'yes' && !num) return alert('Please select number of attendees.');
   if (att === 'yes' && names.some(n => !n)) return alert('Please fill in all guest names.');
 
@@ -697,10 +692,7 @@ async function submitRSVP(btn) {
         body: JSON.stringify({
           response: att,
           partySize: att === 'yes' ? parseInt(num) : 0,
-          contactName:  contactName  || null,
-          contactEmail: contactEmail || null,
-          contactPhone: contactPhone || null,
-          message:      message      || null,
+          contactPhone: contactPhone,
           guests: (att === 'yes' ? names : []).map(n => ({ fullName: n }))
         })
       });

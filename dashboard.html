@@ -6,6 +6,7 @@
 <title>Your Invitation — Dashboard</title>
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -131,6 +132,12 @@
   .btn-save:disabled { opacity: .5; cursor: default; }
   .edit-note { font-size: .72rem; color: var(--muted); }
 
+  /* ── URL LINKS ─────────────────────────────────────────── */
+  .url-row { display: flex; align-items: stretch; background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+  .url-row input { flex: 1; background: transparent; border: none; color: var(--gold-light); font-family: monospace; font-size: .75rem; padding: .5rem .8rem; outline: none; min-width: 0; }
+  .url-row .copy-btn { flex-shrink: 0; border: none; border-left: 1px solid var(--border); padding: .5rem .9rem; background: transparent; color: var(--muted); cursor: pointer; font-family: inherit; font-size: .68rem; letter-spacing: 1.5px; text-transform: uppercase; transition: color .2s; }
+  .url-row .copy-btn:hover { color: var(--gold); }
+
   @media (max-width: 600px) {
     main { padding: 1.2rem .9rem; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -195,6 +202,7 @@
     <div class="tabs-nav">
       <button class="tab-btn active" data-tab="guests" onclick="switchTab('guests',this)">RSVPs</button>
       <button class="tab-btn" data-tab="edit" onclick="switchTab('edit',this)">Edit Invitation</button>
+      <button class="tab-btn" data-tab="account" onclick="switchTab('account',this)">Account</button>
     </div>
 
     <!-- ── GUESTS TAB ── -->
@@ -204,35 +212,42 @@
         <div class="stat-card"><div class="val" id="statTotal">—</div><div class="lbl">Total RSVPs</div></div>
         <div class="stat-card green"><div class="val" id="statYes">—</div><div class="lbl">Attending</div></div>
         <div class="stat-card red"><div class="val" id="statNo">—</div><div class="lbl">Declined</div></div>
-
         <div class="stat-card"><div class="val" id="statSeats">—</div><div class="lbl">Total Seats</div></div>
         <div class="stat-card"><div class="val" id="statRate">—</div><div class="lbl">Accept Rate</div></div>
       </div>
 
+      <!-- Invitation Links -->
+      <div class="section-header" style="margin-bottom:.6rem;">
+        <h3>Invitation Links</h3>
+      </div>
+      <div id="inviteLinks" style="margin-bottom:2rem;"></div>
+
       <!-- RSVP Table -->
       <div class="section-header">
         <h3>Guests</h3>
-        <div class="filter-tabs">
-          <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">All</button>
-          <button class="filter-tab" data-filter="yes" onclick="setFilter('yes', this)">Attending</button>
-          <button class="filter-tab" data-filter="no" onclick="setFilter('no', this)">Declined</button>
-
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">All</button>
+            <button class="filter-tab" data-filter="yes" onclick="setFilter('yes', this)">Attending</button>
+            <button class="filter-tab" data-filter="no" onclick="setFilter('no', this)">Declined</button>
+          </div>
+          <button class="btn-sm" id="dbExportBtn" onclick="exportGuestsExcel()" style="display:none;">Export Excel</button>
         </div>
       </div>
 
       <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Search by name, email or phone…" oninput="renderTable()">
+        <input type="text" id="searchInput" placeholder="Search by name or phone…" oninput="renderTable()">
       </div>
 
       <div class="table-wrap">
         <table id="rsvpTable">
           <thead>
             <tr>
-              <th>Name &amp; Contact</th>
+              <th>Guests</th>
               <th>Response</th>
               <th>Party</th>
+              <th>Phone</th>
               <th>Date</th>
-              <th>Message</th>
             </tr>
           </thead>
           <tbody id="rsvpBody"></tbody>
@@ -244,6 +259,36 @@
     <!-- ── EDIT TAB ── -->
     <div id="tab-edit" style="display:none">
       <div id="editContent"><p style="color:var(--muted);padding:2rem 0">Loading…</p></div>
+    </div>
+
+    <!-- ── ACCOUNT TAB ── -->
+    <div id="tab-account" style="display:none">
+      <div class="edit-section">
+        <div class="edit-section-title">Change Password</div>
+        <div class="edit-body">
+          <div class="edit-grid">
+            <div class="edit-field"><label>Current password</label><input id="acc-cur-pw" type="password" placeholder="Current password"></div>
+            <div class="edit-field"></div>
+            <div class="edit-field"><label>New password</label><input id="acc-new-pw" type="password" placeholder="Min. 8 characters"></div>
+            <div class="edit-field"><label>Confirm new password</label><input id="acc-conf-pw" type="password" placeholder="Confirm"></div>
+          </div>
+          <div class="edit-footer">
+            <button class="btn-save" onclick="changeMyPassword()">Update Password</button>
+          </div>
+        </div>
+      </div>
+      <div class="edit-section">
+        <div class="edit-section-title">Change Email</div>
+        <div class="edit-body">
+          <div class="edit-grid">
+            <div class="edit-field"><label>Current password</label><input id="acc-email-pw" type="password" placeholder="Current password"></div>
+            <div class="edit-field"><label>New email</label><input id="acc-new-email" type="email" placeholder="new@email.com"></div>
+          </div>
+          <div class="edit-footer">
+            <button class="btn-save" onclick="changeMyEmail()">Update Email</button>
+          </div>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -422,7 +467,7 @@ async function loadDashboard() {
 
     const viewLink = document.getElementById('viewInvLink');
     if (summary.slug) {
-      viewLink.href = `${window.location.origin}/index.html?id=${encodeURIComponent(summary.slug)}`;
+      viewLink.href = `${window.location.origin}/index?id=${encodeURIComponent(summary.slug)}`;
     } else {
       viewLink.style.display = 'none';
     }
@@ -435,8 +480,26 @@ async function loadDashboard() {
     document.getElementById('statRate').textContent  = summary.totalRsvps
       ? summary.acceptRate + '%' : '—';
 
+    // Invite links
+    const max = summary.maxAttendees || 0;
+    const linksEl = document.getElementById('inviteLinks');
+    if (max && summary.slug) {
+      const base = `${window.location.origin}/index?id=${encodeURIComponent(summary.slug)}`;
+      linksEl.innerHTML = Array.from({length: max}, (_, i) => {
+        const np = i + 1;
+        const url = `${base}&np=${np}`;
+        return `<div class="url-row">
+          <input readonly value="${escHtml(url)}">
+          <button class="copy-btn" onclick="copyLink(this,'${escHtml(url)}')">Copy</button>
+        </div>`;
+      }).join('');
+    } else {
+      linksEl.innerHTML = '<p style="font-size:.78rem;color:var(--muted);">No links available — set Max Attendees in Edit Invitation.</p>';
+    }
+
     // RSVPs
     allRsvps = rsvps || [];
+    document.getElementById('dbExportBtn').style.display = allRsvps.length ? '' : 'none';
     renderTable();
 
   } catch (e) {
@@ -460,11 +523,11 @@ function renderTable() {
     rows = rows.filter(r => r.response?.toLowerCase() === currentFilter);
 
   if (q)
-    rows = rows.filter(r =>
-      (r.contactName  || '').toLowerCase().includes(q) ||
-      (r.contactEmail || '').toLowerCase().includes(q) ||
-      (r.contactPhone || '').toLowerCase().includes(q)
-    );
+    rows = rows.filter(r => {
+      const names = (r.guests || []).map(g => g.fullName).join(' ');
+      return names.toLowerCase().includes(q) ||
+             (r.contactPhone || '').toLowerCase().includes(q);
+    });
 
   const tbody = document.getElementById('rsvpBody');
   const empty = document.getElementById('emptyState');
@@ -480,25 +543,16 @@ function renderTable() {
     const resp = (r.response || '').toLowerCase();
     const badgeCls = resp === 'yes' ? 'badge-yes' : 'badge-no';
     const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-
-    const guests = (r.guests || []).map(g => {
-      const parts = [g.fullName, g.ageGroup, g.mealPreference, g.dietaryRestrictions].filter(Boolean);
-      return `<div class="guest-row">• ${escHtml(parts.join(' · '))}</div>`;
-    }).join('');
-
-    const contact = [r.contactEmail, r.contactPhone].filter(Boolean).map(escHtml).join(' · ');
+    const guestNames = (r.guests || []).map(g => `<div class="guest-row">• ${escHtml(g.fullName)}</div>`).join('');
 
     return `<tr>
       <td>
-        <div class="td-name">${escHtml(r.contactName || '—')}</div>
-        ${contact ? `<div class="td-contact">${contact}</div>` : ''}
+        ${guestNames || '<span style="color:var(--muted)">—</span>'}
       </td>
       <td><span class="badge ${badgeCls}">${escHtml(r.response || '—')}</span></td>
-      <td>${r.partySize ?? '—'}
-        ${guests ? `<div class="guests-list">${guests}</div>` : ''}
-      </td>
+      <td style="color:var(--muted)">${r.partySize ?? '—'}</td>
+      <td style="font-size:.78rem;color:var(--muted)">${escHtml(r.contactPhone || '—')}</td>
       <td style="white-space:nowrap;color:var(--muted);font-size:.75rem">${date}</td>
-      <td style="font-size:.78rem;color:var(--muted)">${escHtml(r.message || '')}</td>
     </tr>`;
   }).join('');
 }
@@ -507,8 +561,9 @@ function renderTable() {
 function switchTab(tab, el) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('tab-guests').style.display = tab === 'guests' ? '' : 'none';
-  document.getElementById('tab-edit').style.display   = tab === 'edit'   ? '' : 'none';
+  document.getElementById('tab-guests').style.display  = tab === 'guests'  ? '' : 'none';
+  document.getElementById('tab-edit').style.display    = tab === 'edit'    ? '' : 'none';
+  document.getElementById('tab-account').style.display = tab === 'account' ? '' : 'none';
   if (tab === 'edit' && !invEditData) loadEditForm();
 }
 
@@ -698,6 +753,64 @@ async function saveInvitation() {
   } finally {
     btn.disabled = false; btn.textContent = 'Save Changes';
   }
+}
+
+// ── Copy link ────────────────────────────────────────────────────
+function copyLink(btn, url) {
+  navigator.clipboard?.writeText(url).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied ✓';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+// ── Excel export ─────────────────────────────────────────────────
+function exportGuestsExcel() {
+  if (!allRsvps.length) return;
+  const rows = [['Guests', 'Response', 'Party Size', 'Phone', 'Date']];
+  allRsvps.forEach(r => {
+    rows.push([
+      (r.guests || []).map(g => g.fullName).join(', ') || '—',
+      r.response || '—',
+      r.partySize ?? 0,
+      r.contactPhone || '',
+      r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''
+    ]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Guests');
+  XLSX.writeFile(wb, 'guest-list.xlsx');
+}
+
+// ── Account: change password ─────────────────────────────────────
+async function changeMyPassword() {
+  const cur  = document.getElementById('acc-cur-pw').value;
+  const np   = document.getElementById('acc-new-pw').value;
+  const conf = document.getElementById('acc-conf-pw').value;
+  if (!cur)          { toast('Current password is required.', 'err'); return; }
+  if (np.length < 8) { toast('New password must be at least 8 characters.', 'err'); return; }
+  if (np !== conf)   { toast('Passwords do not match.', 'err'); return; }
+  try {
+    await api('POST', '/api/auth/client/change-password', { currentPassword: cur, newPassword: np });
+    toast('Password updated.', 'ok');
+    ['acc-cur-pw','acc-new-pw','acc-conf-pw'].forEach(id => document.getElementById(id).value = '');
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+// ── Account: change email ────────────────────────────────────────
+async function changeMyEmail() {
+  const pw    = document.getElementById('acc-email-pw').value;
+  const email = document.getElementById('acc-new-email').value.trim();
+  if (!pw)    { toast('Current password is required.', 'err'); return; }
+  if (!email) { toast('New email is required.', 'err'); return; }
+  try {
+    await api('POST', '/api/auth/client/change-email', { currentPassword: pw, newEmail: email });
+    toast('Email updated. Please sign in again.', 'ok');
+    document.getElementById('acc-email-pw').value = '';
+    document.getElementById('acc-new-email').value = '';
+    setTimeout(doLogout, 2000);
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────

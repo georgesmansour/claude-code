@@ -5,6 +5,7 @@ using InvitationPlatform.Api.Auth;
 using InvitationPlatform.Domain.Entities;
 using InvitationPlatform.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Rewrite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
@@ -161,6 +162,10 @@ if (app.Environment.IsDevelopment())
 
     if (File.Exists(Path.Combine(repoRoot, "index.html")))
     {
+        // Rewrite extensionless page paths to their .html equivalents
+        app.UseRewriter(new RewriteOptions()
+            .AddRewrite(@"^(admin|dashboard|index)$", "$1.html", skipRemainingRules: true));
+
         app.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = new PhysicalFileProvider(repoRoot),

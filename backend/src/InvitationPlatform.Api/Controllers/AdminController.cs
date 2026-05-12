@@ -228,6 +228,32 @@ public class AdminController(AppDbContext db) : ControllerBase
         return Ok(new { id = client.Id });
     }
 
+    [HttpPatch("clients/{id}/credentials")]
+    public async Task<IActionResult> UpdateClientCredentials(Guid id, [FromBody] UpdateClientCredentialsRequest req)
+    {
+        var client = await db.ClientAccounts.FindAsync(id);
+        if (client is null) return NotFound();
+
+        if (!string.IsNullOrWhiteSpace(req.NewEmail))
+        {
+            var email = req.NewEmail.Trim().ToLowerInvariant();
+            if (await db.ClientAccounts.AnyAsync(c => c.Email == email && c.Id != id))
+                return BadRequest(new { error = "Email already in use" });
+            client.Email = email;
+        }
+
+        if (!string.IsNullOrWhiteSpace(req.NewPassword))
+        {
+            if (req.NewPassword.Length < 8)
+                return BadRequest(new { error = "Password must be at least 8 characters" });
+            client.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+            client.MustChangePassword = true;
+        }
+
+        await db.SaveChangesAsync();
+        return Ok(new { ok = true });
+    }
+
     // ── RSVPs ────────────────────────────────────────────────
     [HttpGet("invitations/{id}/rsvps")]
     public async Task<IActionResult> GetRsvps(Guid id)

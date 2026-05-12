@@ -70,4 +70,66 @@ public class AuthController(AppDbContext db, JwtTokenService jwt) : ControllerBa
         await db.SaveChangesAsync();
         return Ok(new { ok = true });
     }
+
+    [HttpPost("client/change-email")]
+    [Authorize(Roles = "Client")]
+    public async Task<IActionResult> ChangeClientEmail([FromBody] ChangeEmailRequest req)
+    {
+        var clientId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+        var client = await db.ClientAccounts.FindAsync(clientId);
+        if (client is null) return Unauthorized();
+
+        if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, client.PasswordHash))
+            return BadRequest(new { error = "Current password is incorrect" });
+
+        var email = req.NewEmail?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(email)) return BadRequest(new { error = "New email is required" });
+        if (await db.ClientAccounts.AnyAsync(c => c.Email == email && c.Id != clientId))
+            return BadRequest(new { error = "Email already in use" });
+
+        client.Email = email;
+        await db.SaveChangesAsync();
+        return Ok(new { ok = true });
+    }
+
+    [HttpPost("admin/change-password")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ChangeAdminPassword([FromBody] ChangePasswordRequest req)
+    {
+        var adminId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+        var admin = await db.AdminAccounts.FindAsync(adminId);
+        if (admin is null) return Unauthorized();
+
+        if (string.IsNullOrEmpty(req.CurrentPassword))
+            return BadRequest(new { error = "Current password is required" });
+        if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, admin.PasswordHash))
+            return BadRequest(new { error = "Current password is incorrect" });
+        if (req.NewPassword.Length < 8)
+            return BadRequest(new { error = "New password must be at least 8 characters" });
+
+        admin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+        await db.SaveChangesAsync();
+        return Ok(new { ok = true });
+    }
+
+    [HttpPost("admin/change-email")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ChangeAdminEmail([FromBody] ChangeEmailRequest req)
+    {
+        var adminId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+        var admin = await db.AdminAccounts.FindAsync(adminId);
+        if (admin is null) return Unauthorized();
+
+        if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, admin.PasswordHash))
+            return BadRequest(new { error = "Current password is incorrect" });
+
+        var email = req.NewEmail?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(email)) return BadRequest(new { error = "New email is required" });
+        if (await db.AdminAccounts.AnyAsync(a => a.Email == email && a.Id != adminId))
+            return BadRequest(new { error = "Email already in use" });
+
+        admin.Email = email;
+        await db.SaveChangesAsync();
+        return Ok(new { ok = true });
+    }
 }

@@ -4,6 +4,8 @@ namespace InvitationPlatform.Api.Dtos;
 public record LoginRequest(string Email, string Password);
 public record LoginResponse(string Token, string Role, string FullName, bool MustChangePassword);
 public record ChangePasswordRequest(string? CurrentPassword, string NewPassword);
+public record ChangeEmailRequest(string CurrentPassword, string NewEmail);
+public record UpdateClientCredentialsRequest(string? NewEmail, string? NewPassword);
 
 // ── INVITATION DATA SHAPE (matches the existing JS data model) ──
 public class InvitationData

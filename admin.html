@@ -6,6 +6,7 @@
 <title>Invitation Admin</title>
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -214,9 +215,12 @@
     <div class="panel" style="max-width: none;">
       <div class="block">
         <h2>RSVPs by Invitation</h2>
-        <select id="rsvp-invitation-select" class="field" style="padding: .55rem .85rem; max-width: 400px;" onchange="loadRsvps()">
-          <option value="">— Select an invitation —</option>
-        </select>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <select id="rsvp-invitation-select" class="field" style="padding: .55rem .85rem; max-width: 400px;" onchange="loadRsvps()">
+            <option value="">— Select an invitation —</option>
+          </select>
+          <button class="btn" id="exportBtn" onclick="exportRsvpExcel()" style="display:none;">Export Excel</button>
+        </div>
         <div id="rsvp-stats" style="margin-top: 1.2rem;"></div>
         <div id="rsvp-list" style="margin-top: 1rem;"></div>
       </div>
@@ -227,13 +231,26 @@
   <div id="tab-settings" class="hidden">
     <div class="panel">
       <div class="block">
+        <h2>Change Password</h2>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="field full"><label>Current password</label><input id="admin-cur-pw" type="password" placeholder="Current password"></div>
+          <div class="field"><label>New password</label><input id="admin-new-pw" type="password" placeholder="Min. 8 characters"></div>
+          <div class="field"><label>Confirm new password</label><input id="admin-conf-pw" type="password" placeholder="Confirm"></div>
+          <div class="field full"><button class="btn btn-primary" onclick="changeAdminPassword()">Update Password</button></div>
+        </div>
+      </div>
+      <div class="block">
+        <h2>Change Email</h2>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="field"><label>Current password</label><input id="admin-email-pw" type="password" placeholder="Current password"></div>
+          <div class="field"><label>New email</label><input id="admin-new-email" type="email" placeholder="new@email.com"></div>
+          <div class="field full"><button class="btn btn-primary" onclick="changeAdminEmail()">Update Email</button></div>
+        </div>
+      </div>
+      <div class="block">
         <h2>API Endpoint</h2>
         <p style="font-size:.8rem; color:var(--muted); margin-bottom:1rem;">Currently pointing at the address below. To change, set <code>window.API_BASE</code> before this page loads.</p>
         <div id="settings-api"></div>
-      </div>
-      <div class="block">
-        <h2>About</h2>
-        <p style="font-size:.8rem; color:var(--muted);">Data is stored in a Postgres database (Neon) via the .NET API. The public site loads invitations from <code>/api/public/invitations/&lt;slug&gt;</code>; the admin uses <code>/api/admin/*</code> with a JWT token.</p>
       </div>
     </div>
   </div>
@@ -252,12 +269,13 @@ const USER_KEY  = 'ic_admin_user';
 // ════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════
-let invitations = [];
-let templates   = [];
-let currentId   = null;
-let currentInv  = null;     // full editing object loaded from API
-let currentTab  = 'invitations';
-let dirty       = false;
+let invitations  = [];
+let templates    = [];
+let currentId    = null;
+let currentInv   = null;
+let currentTab   = 'invitations';
+let dirty        = false;
+let currentRsvps = [];
 
 // ════════════════════════════════════════════════════════
 // HELPERS
@@ -288,7 +306,7 @@ function copy(text) {
 }
 
 function publicBase() {
-  return location.href.replace(/[^/]*$/, '') + 'index.html';
+  return location.origin + '/index';
 }
 
 // ════════════════════════════════════════════════════════
@@ -516,6 +534,8 @@ function renderEditor() {
       </div>
     </div>
 
+    ${renderInviteLinks(inv)}
+
     <div id="client-account-card"></div>
 
     ${renderSection('cover', 'Cover Page', d.cover, [
@@ -576,6 +596,28 @@ function renderEditor() {
   });
 
   renderClientAccountCard();
+}
+
+function renderInviteLinks(inv) {
+  const max = parseInt(inv.maxAttendees) || 0;
+  if (!max || !inv.slug) return '';
+  const base = `${location.origin}/index?id=${encodeURIComponent(inv.slug)}`;
+  const rows = Array.from({length: max}, (_, i) => {
+    const np = i + 1;
+    const url = `${base}&np=${np}`;
+    return `<div class="url-row" style="margin-bottom:6px;">
+      <input value="${esc(url)}" readonly>
+      <button class="btn" onclick="copy('${esc(url)}')">Copy</button>
+    </div>`;
+  }).join('');
+  return `
+    <div class="section">
+      <div class="section-header"><h2>Invitation Links — ${max} Guest Link${max !== 1 ? 's' : ''}</h2></div>
+      <div class="section-body" style="grid-template-columns:1fr;">
+        <p class="field-help" style="grid-column:1/-1;">One link per guest/family. Each link pre-selects their party size in the RSVP form.</p>
+        ${rows}
+      </div>
+    </div>`;
 }
 
 function onTitleChange(val) {
@@ -931,13 +973,31 @@ function renderExistingClient(c) {
     <div class="section">
       <div class="section-header"><h2>Client Account</h2></div>
       <div class="section-body">
-        <div class="field"><label>Email</label><input value="${esc(c.email)}" readonly></div>
+        <div class="field"><label>Email</label><input id="ca-edit-email" value="${esc(c.email)}"></div>
         <div class="field"><label>Full name</label><input value="${esc(c.fullName)}" readonly></div>
         <div class="field"><label>Status</label><input value="${c.isActive ? 'Active' : 'Disabled'}" readonly></div>
         <div class="field"><label>Last login</label><input value="${c.lastLoginAt ? new Date(c.lastLoginAt).toLocaleString() : 'Never'}" readonly></div>
         ${c.mustChangePassword ? '<p class="field-help" style="grid-column:1/-1; color:var(--gold);">⚠ Couple has not changed their initial password yet.</p>' : ''}
+        <div class="field"><label>New password <span style="opacity:.5">(leave blank to keep)</span></label><input id="ca-edit-pw" type="text" placeholder="Min. 8 characters"></div>
+        <div class="field full" style="display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-primary" onclick="updateClientCredentials('${esc(c.id)}')">Save Changes</button>
+        </div>
       </div>
     </div>`;
+}
+
+async function updateClientCredentials(clientId) {
+  const email = document.getElementById('ca-edit-email')?.value.trim();
+  const pw    = document.getElementById('ca-edit-pw')?.value;
+  const body  = {};
+  if (email) body.newEmail = email;
+  if (pw)    body.newPassword = pw;
+  if (!body.newEmail && !body.newPassword) { toast('Nothing to update', 'error'); return; }
+  try {
+    await api('PATCH', `/api/admin/clients/${clientId}/credentials`, body);
+    toast('Client credentials updated', 'success');
+    renderClientAccountCard();
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 // ════════════════════════════════════════════════════════
@@ -1012,9 +1072,12 @@ async function loadRsvps() {
   const id = document.getElementById('rsvp-invitation-select').value;
   const stats = document.getElementById('rsvp-stats');
   const list  = document.getElementById('rsvp-list');
-  if (!id) { stats.innerHTML = ''; list.innerHTML = ''; return; }
+  const exportBtn = document.getElementById('exportBtn');
+  if (!id) { stats.innerHTML = ''; list.innerHTML = ''; exportBtn.style.display = 'none'; currentRsvps = []; return; }
   try {
     const rsvps = await api('GET', `/api/admin/invitations/${id}/rsvps`);
+    currentRsvps = rsvps;
+    exportBtn.style.display = rsvps.length ? '' : 'none';
     const yes = rsvps.filter(r => r.response === 'Yes');
     const no  = rsvps.filter(r => r.response === 'No');
     const seats = yes.reduce((s, r) => s + r.partySize, 0);
@@ -1029,7 +1092,7 @@ async function loadRsvps() {
     if (!rsvps.length) { list.innerHTML = '<div class="empty-state">No RSVPs yet.</div>'; return; }
     list.innerHTML = `
       <table class="rsvp-table">
-        <thead><tr><th>When</th><th>Response</th><th>Party</th><th>Guests</th><th>Contact</th></tr></thead>
+        <thead><tr><th>When</th><th>Response</th><th>Party</th><th>Guests</th><th>Phone</th></tr></thead>
         <tbody>
           ${rsvps.map(r => `
             <tr>
@@ -1037,10 +1100,59 @@ async function loadRsvps() {
               <td><span class="badge">${esc(r.response)}</span></td>
               <td>${r.partySize}</td>
               <td>${r.guests.map(g => esc(g.fullName)).join(', ') || '—'}</td>
-              <td>${esc(r.contactName || '')} ${r.contactEmail ? '· ' + esc(r.contactEmail) : ''}</td>
+              <td>${esc(r.contactPhone || '—')}</td>
             </tr>`).join('')}
         </tbody>
       </table>`;
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function exportRsvpExcel() {
+  if (!currentRsvps.length) return;
+  const invTitle = document.getElementById('rsvp-invitation-select').selectedOptions[0]?.text || 'guests';
+  const rows = [['Response', 'Party Size', 'Guests', 'Phone', 'Date']];
+  currentRsvps.forEach(r => {
+    rows.push([
+      r.response,
+      r.partySize,
+      (r.guests || []).map(g => g.fullName).join(', '),
+      r.contactPhone || '',
+      r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''
+    ]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Guests');
+  XLSX.writeFile(wb, `${invTitle.replace(/[^a-z0-9]/gi, '-')}-guests.xlsx`);
+}
+
+async function changeAdminPassword() {
+  const cur  = document.getElementById('admin-cur-pw').value;
+  const np   = document.getElementById('admin-new-pw').value;
+  const conf = document.getElementById('admin-conf-pw').value;
+  if (!cur)          { toast('Current password is required', 'error'); return; }
+  if (np.length < 8) { toast('New password must be at least 8 characters', 'error'); return; }
+  if (np !== conf)   { toast('Passwords do not match', 'error'); return; }
+  try {
+    await api('POST', '/api/auth/admin/change-password', { currentPassword: cur, newPassword: np });
+    toast('Password updated', 'success');
+    document.getElementById('admin-cur-pw').value = '';
+    document.getElementById('admin-new-pw').value = '';
+    document.getElementById('admin-conf-pw').value = '';
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function changeAdminEmail() {
+  const pw    = document.getElementById('admin-email-pw').value;
+  const email = document.getElementById('admin-new-email').value.trim();
+  if (!pw)    { toast('Current password is required', 'error'); return; }
+  if (!email) { toast('New email is required', 'error'); return; }
+  try {
+    await api('POST', '/api/auth/admin/change-email', { currentPassword: pw, newEmail: email });
+    toast('Email updated — please log in again', 'success');
+    document.getElementById('admin-email-pw').value = '';
+    document.getElementById('admin-new-email').value = '';
+    setTimeout(logout, 2000);
   } catch (e) { toast(e.message, 'error'); }
 }
 
