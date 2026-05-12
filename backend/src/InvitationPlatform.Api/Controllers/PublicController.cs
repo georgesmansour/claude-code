@@ -48,6 +48,9 @@ public class PublicController(AppDbContext db) : ControllerBase
         if (!Enum.TryParse<RsvpResponse>(req.Response, true, out var response))
             return BadRequest(new { error = "Response must be 'yes' or 'no'" });
 
+        if (response == RsvpResponse.Yes && inv.MaxAttendees > 0 && req.PartySize > inv.MaxAttendees)
+            return BadRequest(new { error = $"Party size cannot exceed {inv.MaxAttendees}" });
+
         var rsvp = new Rsvp
         {
             InvitationId = inv.Id,
