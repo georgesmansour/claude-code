@@ -160,7 +160,8 @@ if (app.Environment.IsDevelopment())
     var repoRoot = builder.Environment.ContentRootPath;
     for (var i = 0; i < 3; i++) repoRoot = Path.GetDirectoryName(repoRoot) ?? repoRoot;
 
-    if (File.Exists(Path.Combine(repoRoot, "index.html")))
+    var frontendDir = Path.Combine(repoRoot, "frontend");
+    if (File.Exists(Path.Combine(frontendDir, "index.html")))
     {
         // Rewrite extensionless page paths to their .html equivalents
         app.UseRewriter(new RewriteOptions()
@@ -168,10 +169,10 @@ if (app.Environment.IsDevelopment())
 
         app.UseStaticFiles(new StaticFileOptions
         {
-            FileProvider = new PhysicalFileProvider(repoRoot),
+            FileProvider = new PhysicalFileProvider(frontendDir),
             RequestPath  = ""
         });
-        app.Logger.LogInformation("Serving HTML files from {Root}", repoRoot);
+        app.Logger.LogInformation("Serving HTML files from {Root}", frontendDir);
     }
 }
 

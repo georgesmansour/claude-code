@@ -1,0 +1,11 @@
+[build]
+  publish = "frontend"
+
+# ── API proxy ────────────────────────────────────────────────────────────────
+# All /api/* requests are forwarded to the .NET backend.
+# ONLY this URL needs to change when you deploy a new backend instance.
+[[redirects]]
+  from   = "/api/*"
+  to     = "https://YOUR-BACKEND-URL/api/:splat"
+  status = 200
+  force  = true
