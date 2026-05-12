@@ -165,7 +165,7 @@ if (app.Environment.IsDevelopment())
     {
         // Rewrite extensionless page paths to their .html equivalents
         app.UseRewriter(new RewriteOptions()
-            .AddRewrite(@"^(admin|dashboard|index)$", "$1.html", skipRemainingRules: true));
+            .AddRewrite(@"^(admin|dashboard|index|classic-wedding)$", "$1.html", skipRemainingRules: true));
 
         app.UseStaticFiles(new StaticFileOptions
         {

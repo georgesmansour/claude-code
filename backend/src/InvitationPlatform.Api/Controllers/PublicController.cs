@@ -19,12 +19,18 @@ public class PublicController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> GetInvitation(string key)
     {
         var inv = await db.Invitations
+            .Include(i => i.Template)
             .Include(i => i.Sections).ThenInclude(s => s.Locations)
             .Include(i => i.Sections).ThenInclude(s => s.GiftAccounts)
             .FirstOrDefaultAsync(i => (i.Slug == key || i.PublicToken == key)
                                       && i.Status == InvitationStatus.Published);
 
         if (inv is null) return NotFound(new { error = "Invitation not found" });
+
+        // Derive a URL-safe key from the template name, e.g. "Classic Wedding" → "classic-wedding"
+        var templateKey = inv.Template is not null
+            ? inv.Template.Name.ToLowerInvariant().Replace(' ', '-')
+            : "classic-wedding";
 
         var data = InvitationDataMapper.ToData(inv);
         return Ok(new
@@ -33,6 +39,7 @@ public class PublicController(AppDbContext db) : ControllerBase
             slug = inv.Slug,
             title = inv.Title,
             eventDate = inv.EventDate,
+            templateKey,
             data
         });
     }
