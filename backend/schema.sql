@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
 
 START TRANSACTION;
 
-
 DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260507165127_InitialSchema') THEN
@@ -378,7 +377,123 @@ DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260507165127_InitialSchema') THEN
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-    VALUES ('20260507165127_InitialSchema', '8.0.11');
+    VALUES ('20260507165127_InitialSchema', '10.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260706201147_AddLocationLabelAndImage') THEN
+    ALTER TABLE locations ADD image_url text;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260706201147_AddLocationLabelAndImage') THEN
+    ALTER TABLE locations ADD label character varying(128);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260706201147_AddLocationLabelAndImage') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260706201147_AddLocationLabelAndImage', '10.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260708180117_AddGuestList') THEN
+    CREATE TABLE guests (
+        id uuid NOT NULL DEFAULT (gen_random_uuid()),
+        invitation_id uuid NOT NULL,
+        name character varying(256) NOT NULL,
+        max_attendees integer NOT NULL DEFAULT 1,
+        selected_attendees integer NOT NULL DEFAULT 0,
+        status character varying(32) NOT NULL DEFAULT 'Pending',
+        token character varying(64) NOT NULL,
+        responded_at timestamp with time zone,
+        created_at timestamp with time zone NOT NULL DEFAULT (now()),
+        updated_at timestamp with time zone NOT NULL DEFAULT (now()),
+        CONSTRAINT "PK_guests" PRIMARY KEY (id),
+        CONSTRAINT "FK_guests_invitations_invitation_id" FOREIGN KEY (invitation_id) REFERENCES invitations (id) ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260708180117_AddGuestList') THEN
+    CREATE INDEX "IX_guests_invitation_id_name" ON guests (invitation_id, name);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260708180117_AddGuestList') THEN
+    CREATE UNIQUE INDEX "IX_guests_token" ON guests (token);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260708180117_AddGuestList') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260708180117_AddGuestList', '10.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260722160152_AddGuestSlugAndRsvpGuestId') THEN
+    ALTER TABLE rsvps ADD guest_id uuid;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260722160152_AddGuestSlugAndRsvpGuestId') THEN
+    ALTER TABLE guests ADD slug character varying(160) NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260722160152_AddGuestSlugAndRsvpGuestId') THEN
+    CREATE INDEX "IX_rsvps_guest_id" ON rsvps (guest_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260722160152_AddGuestSlugAndRsvpGuestId') THEN
+    CREATE INDEX "IX_guests_slug" ON guests (slug);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260722160152_AddGuestSlugAndRsvpGuestId') THEN
+    ALTER TABLE rsvps ADD CONSTRAINT "FK_rsvps_guests_guest_id" FOREIGN KEY (guest_id) REFERENCES guests (id) ON DELETE CASCADE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260722160152_AddGuestSlugAndRsvpGuestId') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260722160152_AddGuestSlugAndRsvpGuestId', '10.0.0');
     END IF;
 END $EF$;
 COMMIT;

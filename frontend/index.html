@@ -24,18 +24,24 @@
   const params = new URLSearchParams(
     window.location.search.replace(/^\?/, '').replace(/\?/g, '&')
   );
-  const id = params.get('id');
 
-  if (!id) {
+  // Personal guest link comes either as a pretty path (/invite/charbel-nahhas)
+  // or the legacy query form (?g=<slug-or-token>).
+  const pathMatch = window.location.pathname.match(/\/invite\/([^/?#]+)/);
+  const guestKey  = pathMatch ? decodeURIComponent(pathMatch[1]) : params.get('g');
+  const id        = params.get('id');
+
+  if (!id && !guestKey) {
     document.getElementById('msg').textContent = 'No invitation specified.';
     return;
   }
 
   try {
     const base = (window.API_BASE || '').replace(/\/$/, '');
-    const res  = await fetch(`${base}/api/public/invitations/${encodeURIComponent(id)}`, {
-      headers: { Accept: 'application/json' }
-    });
+    const url = guestKey
+      ? `${base}/api/public/guest/${encodeURIComponent(guestKey)}`
+      : `${base}/api/public/invitations/${encodeURIComponent(id)}`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
 
     if (!res.ok) {
       document.getElementById('msg').textContent = 'Invitation not found.';
@@ -46,9 +52,17 @@
     // templateKey comes from the API (derived from template name, e.g. "classic-wedding")
     const key = (inv.templateKey || 'classic-wedding').toLowerCase().replace(/\s+/g, '-');
 
-    // Preserve all original query params so ?np=N and any future params survive
-    params.set('id', id);
-    window.location.replace(`/${key}?${params.toString()}`);
+    // Build the target query, preserving personalization params (np, name, spouse, max, gn).
+    const target = new URLSearchParams(params);
+    target.delete('g');
+    target.delete('id');
+    if (guestKey) target.set('g', guestKey);
+    else          target.set('id', id);
+
+    // Navigate straight to the real template FILE (.html) rather than an extensionless
+    // path. This never depends on a server rewrite, so the page loads on the first try
+    // every time — no hard refresh needed.
+    window.location.replace(`/${key}.html?${target.toString()}`);
 
   } catch {
     document.getElementById('msg').textContent = 'Could not load invitation. Please check your connection.';

@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wedding Invitation</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Montserrat:wght@300;400;500&family=Great+Vibes&display=swap" rel="stylesheet">
+<script src="./config.js"></script>
+<style>
+  :root {
+    --bg-color: #FDFBF7;      /* very light beige */
+    --text-main: #4A3B32;     /* dark warm brown */
+    --text-muted: #8D7A6B;    /* medium warm brown */
+    --accent: #C2A888;        /* classic beige accent */
+    --border-light: #EAE0D5;  /* soft beige border */
+    --card-bg: rgba(253, 251, 247, 0.95);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 300;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 500; color: var(--text-main); }
+
+  /* ── TOP NAV (music) ── */
+  .top-nav {
+    position: fixed; top: 20px; right: 20px; z-index: 1000;
+  }
+  .music-toggle {
+    display: none;
+    background: rgba(253,251,247,.85);
+    backdrop-filter: blur(5px);
+    border: 1px solid var(--border-light);
+    padding: 8px 14px; border-radius: 30px;
+    cursor: pointer; font-size: 16px; color: var(--text-main);
+    box-shadow: 0 4px 10px rgba(0,0,0,.05);
+    transition: all .3s ease;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    height: 100vh;
+    background: var(--text-main) center/cover no-repeat;
+    position: relative;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center; color: #fff; overflow: hidden;
+  }
+  .hero-media {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover; z-index: 0;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(74, 59, 50, 0.4); z-index: 1;
+  }
+  .hero-content { position: relative; z-index: 2; padding: 0 1rem; }
+  .monogram {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 6rem; letter-spacing: -5px; margin-bottom: 20px;
+    font-weight: 400; color: var(--bg-color);
+  }
+  .hero-names {
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 6px; font-size: 1.2rem; text-transform: uppercase;
+    display: flex; align-items: center; justify-content: center; gap: 15px;
+    color: var(--bg-color);
+  }
+  .hero-names .heart { font-size: .8rem; color: var(--accent); }
+  .hero-label {
+    margin-top: 18px; font-size: .72rem; letter-spacing: 5px;
+    text-transform: uppercase; color: rgba(253,251,247,.75);
+  }
+
+  /* ── SECTIONS ── */
+  .section { padding: 80px 20px; max-width: 1000px; margin: 0 auto; }
+
+  /* ── INTRO (verse + parents) ── */
+  .intro-text { text-align: center; max-width: 620px; margin: 0 auto; color: var(--text-muted); }
+  .verse {
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 1.6rem; color: var(--accent); margin-bottom: 8px; letter-spacing: .5px;
+    line-height: 1.5;
+  }
+  .verse-ref {
+    font-size: 1rem; font-family: 'Montserrat', sans-serif; font-weight: 400;
+    text-transform: uppercase; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px;
+  }
+  .parents {
+    font-family: 'Montserrat', sans-serif; font-weight: 300; font-size: 1.15rem;
+    color: var(--text-main); line-height: 1.6; letter-spacing: 1px;
+  }
+  .parents-label { font-size: .72rem; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  .and-script { font-family: 'Great Vibes', cursive; font-size: 2.2rem; color: var(--accent); line-height: 1; margin: 15px 0; }
+  .intro-names {
+    font-family: 'Cormorant Garamond', serif; font-weight: bold;
+    font-size: clamp(2.6rem, 9vw, 3.8rem); color: var(--text-main);
+    line-height: 1.1; margin-top: 25px; letter-spacing: 1px;
+  }
+  .intro-tagline {
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 1.6rem; color: var(--accent); margin-top: 25px; letter-spacing: .5px;
+  }
+
+  /* ── CALENDAR ── */
+  .calendar-section {
+    background: center/cover no-repeat;
+    position: relative; padding: 100px 20px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .calendar-section::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to bottom, var(--bg-color) 0%, rgba(253,251,247,.7) 100%);
+  }
+  .save-the-date {
+    font-family: 'Great Vibes', cursive; font-size: clamp(2.8rem, 9vw, 4rem);
+    color: var(--text-main); position: relative; z-index: 2; margin-bottom: 30px;
+  }
+  .calendar-card {
+    position: relative; z-index: 2;
+    background: var(--card-bg); border: 1px solid var(--border-light);
+    border-radius: 20px; padding: 40px;
+    box-shadow: 0 10px 30px rgba(74,59,50,.1);
+    width: 100%; max-width: 350px; text-align: center;
+  }
+  .cal-month { font-family: 'Cormorant Garamond', serif; font-size: 2rem; margin-bottom: 5px; color: var(--text-main); }
+  .cal-year  { font-size: .9rem; letter-spacing: 4px; color: var(--accent); margin-bottom: 30px; }
+  .cal-grid  { display: grid; grid-template-columns: repeat(7, 1fr); gap: 15px 10px; font-size: .9rem; }
+  .cal-day-header { font-weight: 500; color: var(--text-main); }
+  .cal-day { color: var(--text-muted); position: relative; }
+  .cal-day.active { color: var(--text-main); font-weight: 600; }
+  .cal-day.active::after {
+    content: '❤';
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem; color: rgba(194,168,136,.3); z-index: -1;
+  }
+
+  /* ── SPLIT DETAILS ── */
+  .split-section {
+    display: flex; flex-wrap: wrap;
+    background: var(--card-bg);
+    margin: 60px auto; max-width: 1000px;
+    box-shadow: 0 5px 20px rgba(74,59,50,.05);
+    border: 1px solid var(--border-light);
+  }
+  .split-img { flex: 1 1 400px; min-height: 500px; background: var(--border-light) center/cover no-repeat; }
+  .split-content {
+    flex: 1 1 400px; padding: 60px 40px;
+    display: flex; flex-direction: column; justify-content: center; text-align: center;
+  }
+  .detail-block { margin-bottom: 50px; }
+  .detail-block:last-child { margin-bottom: 0; }
+  .detail-title {
+    font-family: 'Montserrat', sans-serif; font-size: .9rem;
+    letter-spacing: 3px; text-transform: uppercase; margin-bottom: 20px; color: var(--accent);
+  }
+  .detail-venue { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; margin-bottom: 10px; color: var(--text-main); }
+  .detail-location {
+    font-size: .9rem; color: var(--text-muted); margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .detail-location .pin { color: var(--accent); }
+  .detail-time {
+    font-size: .9rem; font-weight: 500;
+    border-top: 1px solid var(--border-light); padding-top: 20px;
+    display: inline-block; min-width: 100px; color: var(--text-main);
+    margin-bottom: 15px;
+  }
+  .btn-map {
+    display: inline-block; padding: 10px 20px;
+    background: var(--accent); color: var(--bg-color);
+    text-decoration: none; border-radius: 5px; font-size: .9rem;
+    text-transform: uppercase; letter-spacing: 1px;
+    transition: opacity .3s;
+  }
+  .btn-map:hover { opacity: .85; }
+
+  /* ── TIMELINE ── */
+  .timeline-wrapper { position: relative; max-width: 600px; margin: 20px auto; padding: 40px 0; }
+  .timeline-wrapper::before {
+    content: ''; position: absolute; top: 0; bottom: 0; left: 50%;
+    width: 1px; background: var(--border-light); transform: translateX(-50%);
+  }
+  .timeline-item { position: relative; width: 50%; padding: 20px 40px; }
+  .timeline-item:nth-child(odd)  { left: 0;   text-align: right; }
+  .timeline-item:nth-child(even) { left: 50%; text-align: left; }
+  .timeline-icon {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 50px; height: 50px;
+    background: var(--bg-color); border: 1px solid var(--border-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; color: var(--accent); z-index: 2;
+  }
+  .timeline-item:nth-child(odd)  .timeline-icon { right: -25px; }
+  .timeline-item:nth-child(even) .timeline-icon { left: -25px; }
+  .timeline-time { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 600; margin-bottom: 5px; color: var(--text-main); }
+  .timeline-desc { font-size: .9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ── GALLERY ── */
+  .section-title { text-align: center; font-size: 2rem; margin-bottom: 20px; }
+  .gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 40px 0 0; }
+  .gallery img {
+    width: 100%; height: 300px; object-fit: cover;
+    border-radius: 8px; border: 1px solid var(--border-light);
+    transition: transform .4s ease;
+  }
+  .gallery img:hover { transform: scale(1.02); }
+  .gallery img:nth-child(1) { grid-column: span 2; height: 400px; }
+
+  /* ── INFO BOXES ── */
+  .info-box {
+    text-align: center; padding: 40px;
+    background: var(--card-bg); border: 1px solid var(--border-light);
+    margin-bottom: 20px; border-radius: 10px;
+  }
+  .info-box .box-icon { font-size: 2rem; color: var(--accent); margin-bottom: 15px; display: block; }
+  .info-box h3 { margin-bottom: 15px; font-size: 1.5rem; }
+  .info-box p { font-size: .9rem; color: var(--text-muted); margin-bottom: 15px; }
+  .whish-code {
+    display: inline-flex; align-items: center;
+    font-size: 1.5rem; letter-spacing: 2px;
+    font-family: 'Montserrat', sans-serif; font-weight: 500;
+    padding: 10px 20px; border-bottom: 1px solid var(--accent); color: var(--text-main);
+  }
+  .whish-bank { display: block; font-size: .78rem; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .copy-btn { border: none; background: none; cursor: pointer; color: var(--accent); margin-left: 12px; font-size: 1rem; font-family: 'Montserrat', sans-serif; }
+  .btn-box {
+    display: inline-block; padding: 12px 26px; margin-top: 5px;
+    background: var(--accent); color: var(--bg-color);
+    text-decoration: none; border-radius: 5px; font-size: .85rem;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  /* ── RSVP ── */
+  .rsvp-section {
+    text-align: center; padding: 60px 20px;
+    background: var(--text-main) center/cover no-repeat;
+    position: relative; color: #fff;
+  }
+  .rsvp-section::before { content: ''; position: absolute; inset: 0; background: rgba(74,59,50,.75); }
+  .rsvp-content { position: relative; z-index: 2; }
+  .rsvp-section h3 { color: var(--bg-color); font-size: 2.5rem; margin-bottom: 40px; }
+  .invite-info { margin-bottom: 30px; font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; }
+  .invite-info h4 { color: var(--accent); font-size: 1.8rem; margin-bottom: 5px; }
+  .invite-names { font-weight: 600; font-size: 1.4rem; }
+  .invite-max { font-size: .9rem; color: rgba(253,251,247,.8); }
+
+  .rsvp-form { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 25px; }
+  .att-radios { display: flex; gap: 15px; justify-content: center; margin-bottom: 5px; flex-wrap: wrap; }
+  .att-radios label { cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: .95rem; }
+  .att-radios input { width: auto; margin: 0; accent-color: var(--accent); }
+
+  .rsvp-form input[type="text"], .rsvp-form select, .rsvp-form textarea {
+    width: 100%; padding: 10px 0;
+    background: transparent; border: none;
+    border-bottom: 1px solid rgba(253,251,247,.5);
+    font-family: 'Montserrat', sans-serif; font-size: .9rem; color: #fff;
+    transition: border-color .3s;
+  }
+  .rsvp-form input::placeholder, .rsvp-form textarea::placeholder { color: rgba(253,251,247,.7); }
+  .rsvp-form select option { color: var(--text-main); background: var(--bg-color); }
+  .rsvp-form input:focus, .rsvp-form select:focus, .rsvp-form textarea:focus { outline: none; border-color: var(--accent); }
+  .rsvp-form textarea { resize: none; }
+
+  .btn-submit {
+    margin-top: 20px; background: var(--accent); color: var(--bg-color);
+    border: none; padding: 15px;
+    font-family: 'Montserrat', sans-serif; text-transform: uppercase;
+    letter-spacing: 2px; cursor: pointer; font-size: .8rem;
+    transition: opacity .3s; border-radius: 5px;
+  }
+  .btn-submit:hover { opacity: .8; }
+  .btn-submit:disabled { opacity: .5; cursor: default; }
+  .success-msg { display: none; color: #fff; margin-top: 20px; font-size: 1.1rem; font-style: italic; }
+
+  footer { text-align: center; padding: 40px 20px; font-family: 'Cormorant Garamond', serif; font-style: italic; color: var(--text-muted); }
+  footer .a { color: var(--accent); font-style: normal; }
+
+  @media (max-width: 768px) {
+    .gallery { grid-template-columns: 1fr; }
+    .gallery img { height: 250px; }
+    .gallery img:nth-child(1) { grid-column: span 1; height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <button class="music-toggle" id="musicBtn" aria-label="Toggle music">♪</button>
+</div>
+<audio id="bgMusic" loop preload="none"></audio>
+
+<main id="main"></main>
+
+<script>
+// ── API CONFIG ─────────────────────────────────────────
+const API_BASE = (typeof window !== 'undefined' && window.API_BASE)
+  ? window.API_BASE.replace(/\/$/, '')
+  : '';
+
+let CURRENT_SLUG = null;
+// Set when opened through a personal guest-list link (?g=<token>)
+let CURRENT_GUEST = null;
+
+// ── DEFAULT DATA ───────────────────────────────────────
+const DEFAULT_DATA = {
+  template: 'serene-beige',
+  title: 'Name 1 & Name 2',
+  cover: {
+    enabled: true,
+    eventLabel: '',
+    names: 'Name 1 & Name 2',
+    tagline: 'Request the honor of your presence at their wedding',
+    hostIntro: 'And the two shall become one',
+    hostOutro: 'Mark 10: 8-9',
+    image: ''
+  },
+  countdown: { enabled: true, label: 'Save the date', date: '', description: '', image: '' },
+  families:  { enabled: true, label: '', items: [] },
+  locations: { enabled: true, label: 'Where & When', image: '', items: [] },
+  timeline:  { enabled: true, label: 'The day', title: 'Timeline', items: [] },
+  gallery:   { enabled: true, title: 'Captured Moments', items: [] },
+  gifts:     { enabled: false, title: 'Wedding Gift', description: 'Your presence is the best gift. Should you feel inclined, a list is available via Whish Money.', items: [] },
+  rsvp:      { enabled: true, label: 'Be our guest', title: 'RSVP', deadline: '', maxPeople: 10, buttonText: 'Send Response', allowWishes: true, image: '' },
+  memories:  { enabled: false, title: 'Share Your Memories', description: '', url: '', buttonText: 'Share Memories' },
+  music:     { enabled: false, url: '', autoplay: true },
+  customSections: []
+};
+
+// ── HELPERS ────────────────────────────────────────────
+function decodeData(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  return JSON.parse(decodeURIComponent(escape(atob(s))));
+}
+function mergeDefaults(data) {
+  const out = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  for (const k of Object.keys(data || {})) {
+    if (data[k] && typeof data[k] === 'object' && !Array.isArray(data[k]) && out[k]) {
+      out[k] = Object.assign({}, out[k], data[k]);
+    } else {
+      out[k] = data[k];
+    }
+  }
+  return out;
+}
+function parseQuery() {
+  const raw = window.location.search.replace(/^\?/, '').replace(/\?/g, '&');
+  return new URLSearchParams(raw);
+}
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const nl2br = s => esc(s).replace(/\n/g, '<br>');
+
+// ── DATA LOADING ───────────────────────────────────────
+async function loadData() {
+  const params = parseQuery();
+
+  const enc = params.get('d');
+  if (enc) {
+    try { return mergeDefaults(decodeData(enc)); }
+    catch (e) { console.warn('Bad ?d payload:', e); }
+  }
+
+  // Personal guest-list link (?g=<token>)
+  const token = params.get('g');
+  if (token) {
+    try {
+      const res = await fetch(`${API_BASE}/api/public/guest/${encodeURIComponent(token)}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const body = await res.json();
+        CURRENT_SLUG  = body.slug;
+        CURRENT_GUEST = Object.assign({ token }, body.guest || {});
+        return mergeDefaults(body.data || {});
+      }
+      console.warn('Guest API returned', res.status);
+    } catch (e) { console.warn('Guest API fetch failed:', e); }
+  }
+
+  const id = params.get('id');
+  if (id) {
+    CURRENT_SLUG = id;
+    try {
+      const res = await fetch(`${API_BASE}/api/public/invitations/${encodeURIComponent(id)}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const body = await res.json();
+        return mergeDefaults(body.data || {});
+      }
+      console.warn('API returned', res.status);
+    } catch (e) { console.warn('API fetch failed:', e); }
+    try {
+      const all = JSON.parse(localStorage.getItem('ic_people') || '{}');
+      if (all[id]) return mergeDefaults(all[id].data);
+    } catch { /* ignore */ }
+  }
+
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+
+// ── URL PERSONALIZATION ────────────────────────────────
+// Supports both the reference style (?name=&spouse=&max=) and
+// the platform style (?gn=&np=). Guest-list links (?g=) win over both.
+function getGuestName() {
+  if (CURRENT_GUEST && CURRENT_GUEST.name) return CURRENT_GUEST.name;
+  const p = parseQuery();
+  const gn = p.get('gn');
+  if (gn && gn.trim()) return gn.trim();
+  const name = (p.get('name') || '').trim();
+  const spouse = (p.get('spouse') || '').trim();
+  if (!name) return null;
+  return spouse && spouse !== 'null' ? `${name} & ${spouse}` : name;
+}
+function getMaxOverride() {
+  if (CURRENT_GUEST && CURRENT_GUEST.maxAttendees) return CURRENT_GUEST.maxAttendees;
+  const p = parseQuery();
+  const v = parseInt(p.get('np') || p.get('max'));
+  return v > 0 ? v : null;
+}
+
+// ── RENDERERS ──────────────────────────────────────────
+function monogramOf(names) {
+  const parts = String(names || '').split(/&|,| and /i).map(s => s.trim()).filter(Boolean);
+  return parts.map(p => p.charAt(0).toUpperCase()).slice(0, 2).join('');
+}
+
+function renderHero(c) {
+  const media = c.image || '';
+  const isVideo = /\.(mp4|webm)(\?|$)/i.test(media);
+  const names = esc(c.names || '');
+  const heartNames = names.includes('&amp;')
+    ? names.split('&amp;').map(s => s.trim()).join(' <span class="heart">❤</span> ')
+    : names;
+  return `
+  <section class="hero" ${media && !isVideo ? `style="background-image:url('${esc(media)}')"` : ''}>
+    ${isVideo ? `<video class="hero-media" autoplay loop muted playsinline><source src="${esc(media)}"></video>` : ''}
+    <div class="hero-content">
+      <div class="monogram">${esc(monogramOf(c.names))}</div>
+      <div class="hero-names">${heartNames}</div>
+      ${c.eventLabel ? `<div class="hero-label">${esc(c.eventLabel)}</div>` : ''}
+    </div>
+  </section>`;
+}
+
+function renderIntro(data) {
+  const c = data.cover || {};
+  const fams = ((data.families && data.families.enabled !== false ? data.families.items : []) || []);
+  const famHtml = fams.map((f, i) => `
+    ${i > 0 ? '<div class="and-script">and</div>' : ''}
+    <div class="parents">
+      ${f.label ? `<div class="parents-label">${esc(f.label)}</div>` : ''}
+      ${String(f.names || '').split(/\s*&\s*/).map(esc).join(' <br>& ')}
+    </div>`).join('');
+  return `
+  <section class="section">
+    <div class="intro-text">
+      ${c.hostIntro ? `<div class="verse">${nl2br(c.hostIntro)}</div>` : ''}
+      ${c.hostOutro ? `<div class="verse-ref">(${esc(c.hostOutro)})</div>` : ''}
+      ${famHtml}
+      <div class="intro-names">${esc(c.names || data.title || '')}</div>
+      ${c.tagline ? `<div class="intro-tagline">${esc(c.tagline)}</div>` : ''}
+    </div>
+  </section>`;
+}
+
+function renderCalendar(cd) {
+  if (!cd || cd.enabled === false || !cd.date) return '';
+  const dt = new Date(cd.date + 'T00:00:00');
+  if (isNaN(dt)) return '';
+  const y = dt.getFullYear(), m = dt.getMonth(), day = dt.getDate();
+  const monthName = dt.toLocaleDateString('en-US', { month: 'long' });
+  // Monday-first grid
+  const firstDow = (new Date(y, m, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  let cells = '';
+  for (const h of ['M','T','W','T','F','S','S']) cells += `<div class="cal-day-header">${h}</div>`;
+  for (let i = 0; i < firstDow; i++) cells += '<div class="cal-day"></div>';
+  for (let d = 1; d <= daysInMonth; d++)
+    cells += `<div class="cal-day${d === day ? ' active' : ''}">${d}</div>`;
+  return `
+  <section class="calendar-section" ${cd.image ? `style="background-image:url('${esc(cd.image)}')"` : ''}>
+    <div class="save-the-date">${esc(cd.label || 'Save the date')}</div>
+    <div class="calendar-card">
+      <div class="cal-month">${esc(monthName)}</div>
+      <div class="cal-year">${y}</div>
+      <div class="cal-grid">${cells}</div>
+    </div>
+    ${cd.description ? `<p style="position:relative;z-index:2;margin-top:25px;color:var(--text-muted);font-size:.95rem;">${esc(cd.description)}</p>` : ''}
+  </section>`;
+}
+
+function renderLocations(l) {
+  const blocks = (l.items || []).map(loc => `
+    <div class="detail-block">
+      ${loc.label ? `<div class="detail-title">${esc(loc.label)}</div>` : ''}
+      ${loc.name ? `<div class="detail-venue">${esc(loc.name)}</div>` : ''}
+      ${loc.addr ? `<div class="detail-location"><span class="pin">📍</span> ${esc(loc.addr)}</div>` : ''}
+      ${loc.time ? `<div class="detail-time">${esc(loc.time)}</div>` : ''}
+      ${loc.url ? `<div><a class="btn-map" href="${esc(loc.url)}" target="_blank" rel="noopener">View on Map</a></div>` : ''}
+    </div>`).join('');
+  return `
+  <section class="split-section">
+    <div class="split-img" ${l.image ? `style="background-image:url('${esc(l.image)}')"` : ''}></div>
+    <div class="split-content">${blocks}</div>
+  </section>`;
+}
+
+function renderTimeline(t) {
+  const items = (t.items || []).map(x => `
+    <div class="timeline-item">
+      <div class="timeline-icon">${esc(x.icon || '✦')}</div>
+      <div class="timeline-time">${esc(x.time || '')}</div>
+      <div class="timeline-desc">${esc(x.title || '')}${x.subtitle ? ` — ${esc(x.subtitle)}` : ''}</div>
+    </div>`).join('');
+  return `
+  <section class="section">
+    ${t.title ? `<h3 class="section-title">${esc(t.title)}</h3>` : ''}
+    <div class="timeline-wrapper">${items}</div>
+  </section>`;
+}
+
+function renderGallery(g) {
+  const imgs = (g.items || []).map(x =>
+    `<img src="${esc(x.url)}" alt="${esc(x.caption || 'Photo')}" loading="lazy">`).join('');
+  return `
+  <section class="section">
+    ${g.title ? `<h3 class="section-title">${esc(g.title)}</h3>` : ''}
+    <div class="gallery">${imgs}</div>
+  </section>`;
+}
+
+function renderInfoBoxes(data) {
+  const boxes = [];
+  (data.customSections || []).forEach(s => {
+    if (s.enabled === false) return;
+    boxes.push(`
+      <div class="info-box">
+        <span class="box-icon">✦</span>
+        ${s.title ? `<h3>${esc(s.title)}</h3>` : ''}
+        ${s.body ? `<p>${nl2br(s.body)}</p>` : ''}
+        ${s.label ? `<p style="font-weight:500;color:var(--text-main);">${esc(s.label)}</p>` : ''}
+      </div>`);
+  });
+
+  const g = data.gifts;
+  if (g && g.enabled !== false && (g.items || []).length) {
+    const accounts = g.items.map(x => `
+      <div style="margin-top:10px;">
+        ${x.bank ? `<span class="whish-bank">${esc(x.bank)}</span>` : ''}
+        <span class="whish-code">
+          <span>${esc(x.account || '')}</span>
+          <button class="copy-btn" data-copy="${esc(x.account || '')}">Copy</button>
+        </span>
+      </div>`).join('');
+    boxes.push(`
+      <div class="info-box">
+        <span class="box-icon">🎁</span>
+        ${g.title ? `<h3>${esc(g.title)}</h3>` : ''}
+        ${g.description ? `<p>${nl2br(g.description)}</p>` : ''}
+        ${accounts}
+      </div>`);
+  }
+
+  const m = data.memories;
+  if (m && m.enabled !== false && m.url) {
+    boxes.push(`
+      <div class="info-box">
+        <span class="box-icon">📷</span>
+        ${m.title ? `<h3>${esc(m.title)}</h3>` : ''}
+        ${m.description ? `<p>${nl2br(m.description)}</p>` : ''}
+        <a class="btn-box" href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.buttonText || 'Share Memories')}</a>
+      </div>`);
+  }
+
+  if (!boxes.length) return '';
+  return `<section class="section" style="max-width:800px;">${boxes.join('')}</section>`;
+}
+
+function renderRsvp(r, maxPeople, guestName) {
+  const opts = ['<option value="" disabled selected>Number of Guests</option>'];
+  for (let i = 1; i <= maxPeople; i++) opts.push(`<option value="${i}">${i}</option>`);
+  return `
+  <section class="rsvp-section" ${r.image ? `style="background-image:url('${esc(r.image)}')"` : ''}>
+    <div class="rsvp-content">
+      <h3>${esc(r.title || 'RSVP')}</h3>
+      <div class="invite-info">
+        ${r.label ? `<h4>${esc(r.label)}</h4>` : ''}
+        ${r.deadline ? `<p style="margin-bottom:10px;">Please reply before ${esc(r.deadline)}</p>` : ''}
+        ${guestName ? `<p class="invite-names">${esc(guestName)}</p>
+        <p class="invite-max">Number of invitees: ${maxPeople}</p>` : ''}
+      </div>
+      <form class="rsvp-form" data-rsvp>
+        ${guestName ? '' : `<input type="text" data-guest-name placeholder="Your name(s)" style="text-align:center;">`}
+        <div class="att-radios">
+          <label><input type="radio" name="attending" value="yes"> Joyfully Accept</label>
+          <label><input type="radio" name="attending" value="no"> Regretfully Decline</label>
+        </div>
+        <select data-guest-count style="display:none;">${opts.join('')}</select>
+        ${r.allowWishes !== false ? `<textarea data-wishes rows="3" maxlength="200" placeholder="Share your love and wishes..."></textarea>` : ''}
+        <button type="submit" class="btn-submit">${esc(r.buttonText || 'Send Response')}</button>
+      </form>
+      <div class="success-msg" data-rsvp-success>Thank you! We can't wait to celebrate with you.</div>
+    </div>
+  </section>`;
+}
+
+// ── BUILD ──────────────────────────────────────────────
+function build(data) {
+  const guestName = getGuestName();
+  const maxPeople = getMaxOverride() || (data.rsvp && data.rsvp.maxPeople) || 10;
+
+  const parts = [];
+  if (data.cover && data.cover.enabled !== false) parts.push(renderHero(data.cover));
+  parts.push(renderIntro(data));
+  parts.push(renderCalendar(data.countdown));
+  if (data.locations && data.locations.enabled !== false && (data.locations.items || []).length) parts.push(renderLocations(data.locations));
+  if (data.timeline  && data.timeline.enabled  !== false && (data.timeline.items || []).length)  parts.push(renderTimeline(data.timeline));
+  if (data.gallery   && data.gallery.enabled   !== false && (data.gallery.items  || []).length)  parts.push(renderGallery(data.gallery));
+  parts.push(renderInfoBoxes(data));
+  if (data.rsvp && data.rsvp.enabled !== false) parts.push(renderRsvp(data.rsvp, maxPeople, guestName));
+  parts.push('<footer>Made with <span class="a">❤</span></footer>');
+
+  document.getElementById('main').innerHTML = parts.join('');
+  document.title = (data.title || (data.cover && data.cover.names) || 'Invitation') + ' — Wedding Invitation';
+
+  setupMusic(data.music);
+}
+
+// ── MUSIC (autoplay on first interaction, like the reference) ──
+let musicStarted = false;
+function setupMusic(m) {
+  if (!m || m.enabled === false || !m.url) return;
+  const audio = document.getElementById('bgMusic');
+  const btn = document.getElementById('musicBtn');
+  audio.src = m.url;
+  btn.style.display = 'block';
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (audio.paused) audio.play().catch(() => {});
+    else audio.pause();
+  });
+  audio.addEventListener('play',  () => { btn.textContent = '❚❚'; musicStarted = true; });
+  audio.addEventListener('pause', () => { btn.textContent = '♪'; });
+
+  if (m.autoplay !== false) {
+    const start = () => {
+      if (musicStarted) return;
+      audio.play().then(() => {
+        window.removeEventListener('scroll', start);
+        window.removeEventListener('click', start);
+        window.removeEventListener('touchstart', start);
+      }).catch(() => { /* keep listening for the next interaction */ });
+    };
+    window.addEventListener('scroll', start, { passive: true });
+    window.addEventListener('click', start);
+    window.addEventListener('touchstart', start, { passive: true });
+  }
+}
+
+// ── EVENTS ─────────────────────────────────────────────
+document.addEventListener('click', e => {
+  const copy = e.target.closest('[data-copy]');
+  if (copy) {
+    navigator.clipboard?.writeText(copy.dataset.copy).then(() => {
+      const orig = copy.textContent;
+      copy.textContent = '✓';
+      setTimeout(() => copy.textContent = orig, 2000);
+    });
+  }
+});
+
+document.addEventListener('change', e => {
+  if (e.target.matches('input[name="attending"]')) {
+    const sel = e.target.closest('[data-rsvp]').querySelector('[data-guest-count]');
+    sel.style.display = e.target.value === 'yes' ? 'block' : 'none';
+  }
+});
+
+document.addEventListener('submit', async e => {
+  const form = e.target.closest('[data-rsvp]');
+  if (!form) return;
+  e.preventDefault();
+
+  const att   = form.querySelector('input[name="attending"]:checked');
+  const count = form.querySelector('[data-guest-count]').value;
+  const nameInput = form.querySelector('[data-guest-name]');
+  const name  = getGuestName() || (nameInput ? nameInput.value.trim() : '');
+  const wishes = form.querySelector('[data-wishes]');
+
+  if (!att) return alert('Please choose Accept or Decline.');
+  const attending = att.value === 'yes';
+  if (!name) return alert('Please enter your name.');
+  if (attending && !count) return alert('Please select the number of guests.');
+
+  if (CURRENT_SLUG) {
+    const btn = form.querySelector('.btn-submit');
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Sending…';
+    try {
+      const guestNames = attending
+        ? name.split(/\s*(?:&|,| and )\s*/i).map(s => s.trim()).filter(Boolean)
+        : [];
+      const res = await fetch(`${API_BASE}/api/public/invitations/${encodeURIComponent(CURRENT_SLUG)}/rsvp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          response: attending ? 'yes' : 'no',
+          partySize: attending ? parseInt(count) : 0,
+          contactName: name,
+          message: wishes ? (wishes.value.trim() || null) : null,
+          guests: guestNames.map(n => ({ fullName: n })),
+          guestToken: CURRENT_GUEST ? CURRENT_GUEST.token : null
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        btn.disabled = false;
+        btn.textContent = original;
+        return alert(err.error || `Submission failed (${res.status}). Please try again.`);
+      }
+    } catch {
+      const btn2 = form.querySelector('.btn-submit');
+      btn2.disabled = false;
+      btn2.textContent = original;
+      return alert('Network error. Please check your connection and try again.');
+    }
+  }
+
+  form.style.display = 'none';
+  form.parentElement.querySelector('[data-rsvp-success]').style.display = 'block';
+});
+
+// ── INIT ───────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    build(await loadData());
+  } catch (e) {
+    console.error('Failed to load invitation data:', e);
+    build(JSON.parse(JSON.stringify(DEFAULT_DATA)));
+  }
+});
+</script>
+</body>
+</html>

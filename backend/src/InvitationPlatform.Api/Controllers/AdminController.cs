@@ -107,7 +107,8 @@ public class AdminController(AppDbContext db) : ControllerBase
         return Ok(new InvitationFull(
             inv.Id, inv.Slug, inv.Title, inv.Status.ToString(),
             inv.EventType, inv.EventDate, inv.MaxAttendees, inv.TemplateId,
-            inv.UpdatedAt, InvitationDataMapper.ToData(inv)));
+            inv.UpdatedAt, InvitationDataMapper.ToData(inv),
+            inv.PublicToken));
     }
 
     [HttpPost("invitations")]

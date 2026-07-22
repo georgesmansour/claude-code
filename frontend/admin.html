@@ -463,10 +463,23 @@ async function selectInvitation(id) {
 async function newInvitation() {
   if (dirty && !confirm('Discard unsaved changes?')) return;
 
-  // pick a template (default: first one)
   if (!templates.length) await refreshTemplates();
   if (!templates.length) { toast('No templates available', 'error'); return; }
-  const tpl = templates[0];
+
+  // pick a template
+  let tpl = templates[0];
+  const active = templates.filter(t => t.isActive !== false);
+  const pool = active.length ? active : templates;
+  if (pool.length > 1) {
+    const list = pool.map((t, i) => `${i + 1}. ${t.name}`).join('\n');
+    const pick = prompt(`Choose a template:\n${list}\n\nEnter a number (1-${pool.length}):`, '1');
+    if (pick === null) return;
+    const idx = parseInt(pick) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= pool.length) { toast('Invalid template choice', 'error'); return; }
+    tpl = pool[idx];
+  } else {
+    tpl = pool[0];
+  }
 
   const title = prompt('Title for this invitation (e.g. "Charbel & Marianne"):');
   if (!title) return;
@@ -496,13 +509,17 @@ function renderEditor() {
   const inv = currentInv;
   const d = inv.data;
   const publicUrl = `${publicBase()}?id=${encodeURIComponent(inv.slug)}`;
+  // Drafts aren't served by slug — preview through the secret token instead
+  const previewUrl = inv.status === 'Published' || !inv.publicToken
+    ? publicUrl
+    : `${publicBase()}?id=${encodeURIComponent(inv.publicToken)}`;
 
   el.innerHTML = `
     <div class="editor-header">
       <input class="editor-title-input" id="ed-title" value="${esc(inv.title)}" oninput="onTitleChange(this.value)">
       <span class="pill">${esc(inv.status)}</span>
       <div class="header-actions">
-        <button class="btn" onclick="window.open('${esc(publicUrl)}','_blank')">Preview</button>
+        <button class="btn" onclick="window.open('${esc(previewUrl)}','_blank')">Preview</button>
         ${inv.status === 'Published'
           ? `<button class="btn btn-ghost" onclick="unpublishInvitation()">Unpublish</button>`
           : `<button class="btn btn-success" onclick="publishInvitation()">Publish</button>`}
@@ -547,20 +564,34 @@ function renderEditor() {
       { key: 'hostIntro', label: 'Host intro line' },
       { key: 'hostOutro', label: 'Host outro line' },
       { key: 'hostText', label: 'Hosting families', full: true },
+      { key: 'greeting', label: 'Greeting prefix (Elegant Noir, e.g. "Dear")' },
+      { key: 'sealImage', label: 'Wax-seal image URL (Elegant Noir)', image: true },
       { key: 'image', label: 'Cover image URL', full: true, image: true }
     ])}
 
     ${renderSection('countdown', 'Date & Countdown', d.countdown, [
       { key: 'label', label: 'Section label' },
       { key: 'date', label: 'Event date', type: 'date' },
-      { key: 'description', label: 'Description', full: true, type: 'textarea' },
+      { key: 'description', label: 'Description / venue line', full: true, type: 'textarea' },
       { key: 'image', label: 'Background image URL', full: true, image: true }
     ])}
 
+    ${renderFamilies(d.families)}
+    ${renderGallery(d.gallery)}
     ${renderLocations(d.locations)}
+    ${renderTimeline(d.timeline)}
     ${renderGifts(d.gifts)}
     ${renderCustomSections(d.customSections || [])}
     ${renderRsvp(d.rsvp)}
+    ${renderSection('memories', 'Share Memories (Elegant Noir)', d.memories || { enabled: false }, [
+      { key: 'title', label: 'Title' },
+      { key: 'buttonText', label: 'Button text' },
+      { key: 'url', label: 'Shared album / upload link', full: true },
+      { key: 'description', label: 'Description', full: true, type: 'textarea' }
+    ])}
+    ${renderSection('music', 'Background Music (Elegant Noir)', d.music || { enabled: false }, [
+      { key: 'url', label: 'Audio file URL (mp3)', full: true }
+    ])}
 
     <div class="footer-actions">
       <button class="btn btn-primary" onclick="saveCurrent()">Save</button>
@@ -690,8 +721,10 @@ function renderLocations(L) {
         </div>
       </div>
       <div class="item-grid">
+        <div class="field"><label>Card label (e.g. Wedding Ceremony)</label><input data-item="locations.${i}.label" value="${esc(loc.label)}"></div>
         <div class="field"><label>Time / Type</label><input data-item="locations.${i}.time" value="${esc(loc.time)}"></div>
         <div class="field"><label>Name</label><input data-item="locations.${i}.name" value="${esc(loc.name)}"></div>
+        <div class="field"><label>Photo URL (optional)</label><input data-item="locations.${i}.img" value="${esc(loc.img)}"></div>
         <div class="field full"><label>Address</label><input data-item="locations.${i}.addr" value="${esc(loc.addr)}"></div>
         <div class="field full"><label>Maps URL</label><input data-item="locations.${i}.url" value="${esc(loc.url)}"></div>
       </div>
@@ -713,7 +746,7 @@ function renderLocations(L) {
         <div class="field"><label>Section title</label><input data-section-bind="locations.title" value="${esc(L.title)}"></div>
         <div class="field full"><label>Background image URL</label><input data-section-bind="locations.image" data-preview="loc-img-prev" value="${esc(L.image)}"><img id="loc-img-prev" class="img-preview" src="${esc(L.image)}" onerror="this.style.display='none'" onload="this.style.display='block'"></div>
         <div class="item-list">${items}</div>
-        <button class="add-btn" onclick="addItem('locations', { time:'', name:'', addr:'', url:'' })">+ Add location</button>
+        <button class="add-btn" onclick="addItem('locations', { label:'', time:'', name:'', addr:'', url:'', img:'' })">+ Add location</button>
       </div>
     </div>`;
 }
@@ -791,9 +824,125 @@ function renderRsvp(R) {
   return renderSection('rsvp', 'RSVP', R, [
     { key: 'label', label: 'Section label' },
     { key: 'title', label: 'Section title' },
-    { key: 'deadline', label: 'Deadline text', full: true },
+    { key: 'deadline', label: 'Deadline text' },
+    { key: 'buttonText', label: 'Submit button text (Elegant Noir)' },
     { key: 'image', label: 'Background image URL', full: true, image: true }
   ]);
+}
+
+function renderFamilies(F) {
+  if (!F) F = { enabled: false, items: [] };
+  const items = (F.items || []).map((x, i) => `
+    <div class="item-card">
+      <div class="item-card-header">
+        <span class="item-card-title">Family ${i + 1}</span>
+        <div class="item-card-controls">
+          <button class="btn btn-icon" onclick="moveItem('families',${i},-1)">↑</button>
+          <button class="btn btn-icon" onclick="moveItem('families',${i},1)">↓</button>
+          <button class="btn btn-icon btn-danger" onclick="removeItem('families',${i})">✕</button>
+        </div>
+      </div>
+      <div class="item-grid">
+        <div class="field"><label>Card label (e.g. Mr. &amp; Mrs.)</label><input data-item="families.${i}.label" value="${esc(x.label)}"></div>
+        <div class="field"><label>Names</label><input data-item="families.${i}.names" value="${esc(x.names)}"></div>
+      </div>
+    </div>`).join('');
+  return `
+    <div class="section ${F.enabled === false ? 'disabled' : ''}" id="sec-families">
+      <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
+        <h2>Families <span class="pill" style="margin-left:8px;">Elegant Noir</span></h2>
+        <div class="section-controls">
+          <label class="toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" ${F.enabled !== false ? 'checked' : ''} onchange="toggleSection('families', this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="chev">▾</span>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="field full"><label>Outro line (e.g. "Together with their families")</label><input data-section-bind="families.label" value="${esc(F.label)}"></div>
+        <div class="item-list">${items}</div>
+        <button class="add-btn" onclick="addItem('families', { label:'Mr. & Mrs.', names:'' })">+ Add family</button>
+      </div>
+    </div>`;
+}
+
+function renderGallery(G) {
+  if (!G) G = { enabled: false, items: [] };
+  const items = (G.items || []).map((x, i) => `
+    <div class="item-card">
+      <div class="item-card-header">
+        <span class="item-card-title">Photo ${i + 1}</span>
+        <div class="item-card-controls">
+          <button class="btn btn-icon" onclick="moveItem('gallery',${i},-1)">↑</button>
+          <button class="btn btn-icon" onclick="moveItem('gallery',${i},1)">↓</button>
+          <button class="btn btn-icon btn-danger" onclick="removeItem('gallery',${i})">✕</button>
+        </div>
+      </div>
+      <div class="item-grid">
+        <div class="field full"><label>Image URL</label><input data-item="gallery.${i}.url" value="${esc(x.url)}"></div>
+        <div class="field full"><label>Caption (optional)</label><input data-item="gallery.${i}.caption" value="${esc(x.caption)}"></div>
+      </div>
+    </div>`).join('');
+  return `
+    <div class="section ${G.enabled === false ? 'disabled' : ''}" id="sec-gallery">
+      <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
+        <h2>Photo Gallery <span class="pill" style="margin-left:8px;">Elegant Noir</span></h2>
+        <div class="section-controls">
+          <label class="toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" ${G.enabled !== false ? 'checked' : ''} onchange="toggleSection('gallery', this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="chev">▾</span>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="field"><label>Section label</label><input data-section-bind="gallery.label" value="${esc(G.label)}"></div>
+        <div class="field"><label>Section title</label><input data-section-bind="gallery.title" value="${esc(G.title)}"></div>
+        <div class="item-list">${items}</div>
+        <button class="add-btn" onclick="addItem('gallery', { url:'', caption:'' })">+ Add photo</button>
+      </div>
+    </div>`;
+}
+
+function renderTimeline(T) {
+  if (!T) T = { enabled: false, items: [] };
+  const items = (T.items || []).map((x, i) => `
+    <div class="item-card">
+      <div class="item-card-header">
+        <span class="item-card-title">Step ${i + 1}</span>
+        <div class="item-card-controls">
+          <button class="btn btn-icon" onclick="moveItem('timeline',${i},-1)">↑</button>
+          <button class="btn btn-icon" onclick="moveItem('timeline',${i},1)">↓</button>
+          <button class="btn btn-icon btn-danger" onclick="removeItem('timeline',${i})">✕</button>
+        </div>
+      </div>
+      <div class="item-grid">
+        <div class="field"><label>Time (e.g. 6:30 PM)</label><input data-item="timeline.${i}.time" value="${esc(x.time)}"></div>
+        <div class="field"><label>Icon (emoji)</label><input data-item="timeline.${i}.icon" value="${esc(x.icon)}"></div>
+        <div class="field"><label>Title</label><input data-item="timeline.${i}.title" value="${esc(x.title)}"></div>
+        <div class="field"><label>Subtitle / venue</label><input data-item="timeline.${i}.subtitle" value="${esc(x.subtitle)}"></div>
+      </div>
+    </div>`).join('');
+  return `
+    <div class="section ${T.enabled === false ? 'disabled' : ''}" id="sec-timeline">
+      <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
+        <h2>Wedding Timeline <span class="pill" style="margin-left:8px;">Elegant Noir</span></h2>
+        <div class="section-controls">
+          <label class="toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" ${T.enabled !== false ? 'checked' : ''} onchange="toggleSection('timeline', this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="chev">▾</span>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="field"><label>Section label</label><input data-section-bind="timeline.label" value="${esc(T.label)}"></div>
+        <div class="field"><label>Section title</label><input data-section-bind="timeline.title" value="${esc(T.title)}"></div>
+        <div class="item-list">${items}</div>
+        <button class="add-btn" onclick="addItem('timeline', { time:'', icon:'✦', title:'', subtitle:'' })">+ Add step</button>
+      </div>
+    </div>`;
 }
 
 // dynamic items handler

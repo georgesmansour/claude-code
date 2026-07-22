@@ -3,6 +3,7 @@ using System;
 using InvitationPlatform.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace InvitationPlatform.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260706201147_AddLocationLabelAndImage")]
+    partial class AddLocationLabelAndImage
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -257,86 +260,6 @@ namespace InvitationPlatform.Infrastructure.Migrations
                     b.HasIndex("SectionId", "OrderIndex");
 
                     b.ToTable("gift_accounts", (string)null);
-                });
-
-            modelBuilder.Entity("InvitationPlatform.Domain.Entities.Guest", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("InvitationId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("invitation_id");
-
-                    b.Property<int>("MaxAttendees")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
-                        .HasColumnName("max_attendees");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("name");
-
-                    b.Property<DateTime?>("RespondedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("responded_at");
-
-                    b.Property<int>("SelectedAttendees")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("selected_attendees");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)")
-                        .HasDefaultValue("")
-                        .HasColumnName("slug");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasDefaultValue("Pending")
-                        .HasColumnName("status");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("token");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Slug");
-
-                    b.HasIndex("Token")
-                        .IsUnique();
-
-                    b.HasIndex("InvitationId", "Name");
-
-                    b.ToTable("guests", (string)null);
                 });
 
             modelBuilder.Entity("InvitationPlatform.Domain.Entities.Invitation", b =>
@@ -622,10 +545,6 @@ namespace InvitationPlatform.Infrastructure.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<Guid?>("GuestId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("guest_id");
-
                     b.Property<Guid>("InvitationId")
                         .HasColumnType("uuid")
                         .HasColumnName("invitation_id");
@@ -659,8 +578,6 @@ namespace InvitationPlatform.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
-
-                    b.HasIndex("GuestId");
 
                     b.HasIndex("InvitationId");
 
@@ -822,17 +739,6 @@ namespace InvitationPlatform.Infrastructure.Migrations
                     b.Navigation("Section");
                 });
 
-            modelBuilder.Entity("InvitationPlatform.Domain.Entities.Guest", b =>
-                {
-                    b.HasOne("InvitationPlatform.Domain.Entities.Invitation", "Invitation")
-                        .WithMany()
-                        .HasForeignKey("InvitationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Invitation");
-                });
-
             modelBuilder.Entity("InvitationPlatform.Domain.Entities.Invitation", b =>
                 {
                     b.HasOne("InvitationPlatform.Domain.Entities.AdminAccount", "CreatedByAdmin")
@@ -886,11 +792,6 @@ namespace InvitationPlatform.Infrastructure.Migrations
 
             modelBuilder.Entity("InvitationPlatform.Domain.Entities.Rsvp", b =>
                 {
-                    b.HasOne("InvitationPlatform.Domain.Entities.Guest", null)
-                        .WithMany()
-                        .HasForeignKey("GuestId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
                     b.HasOne("InvitationPlatform.Domain.Entities.Invitation", "Invitation")
                         .WithMany("Rsvps")
                         .HasForeignKey("InvitationId")

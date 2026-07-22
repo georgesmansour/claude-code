@@ -139,6 +139,23 @@
   .url-row .copy-btn { flex-shrink: 0; border: none; border-left: 1px solid var(--border); padding: .5rem .9rem; background: transparent; color: var(--muted); cursor: pointer; font-family: inherit; font-size: .68rem; letter-spacing: 1.5px; text-transform: uppercase; transition: color .2s; }
   .url-row .copy-btn:hover { color: var(--gold); }
 
+  /* ── GUEST LIST TABLE ──────────────────────────────────── */
+  #glTable td { vertical-align: middle; }
+  .gl-input { width: 100%; min-width: 130px; padding: .5rem .7rem; background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 4px; color: var(--white); font-family: inherit; font-size: .82rem; outline: none; transition: border-color .15s; }
+  .gl-input:focus { border-color: var(--gold); }
+  .gl-max { width: 4.5rem; min-width: 0; text-align: center; }
+  .gl-selected { text-align: center; color: var(--text); font-variant-numeric: tabular-nums; }
+  .gl-linkcell { min-width: 200px; }
+  .gl-link { width: 100%; padding: .5rem .7rem; background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 4px; color: var(--gold-light); font-family: monospace; font-size: .72rem; outline: none; cursor: pointer; }
+  .gl-link:focus { border-color: var(--gold); }
+  .gl-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .gl-actions .btn-sm { padding: .35rem .7rem; font-size: .64rem; }
+  .gl-actions .btn-sm.danger { border-color: rgba(217,102,102,.4); color: var(--danger); }
+  .gl-actions .btn-sm.danger:hover { background: rgba(217,102,102,.1); border-color: var(--danger); }
+  .gl-actions .btn-sm.save { border-color: var(--gold); color: var(--gold); }
+  .badge-pending { background: rgba(255,255,255,.06); color: var(--muted); }
+  .gl-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
   @media (max-width: 600px) {
     main { padding: 1.2rem .9rem; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -202,6 +219,7 @@
     <!-- Tab navigation -->
     <div class="tabs-nav">
       <button class="tab-btn active" data-tab="guests" onclick="switchTab('guests',this)">RSVPs</button>
+      <button class="tab-btn" data-tab="guestlist" onclick="switchTab('guestlist',this)">Guest List</button>
       <button class="tab-btn" data-tab="edit" onclick="switchTab('edit',this)">Edit Invitation</button>
       <button class="tab-btn" data-tab="account" onclick="switchTab('account',this)">Account</button>
     </div>
@@ -254,6 +272,47 @@
           <tbody id="rsvpBody"></tbody>
         </table>
         <div class="empty-state hidden" id="emptyState"><p>No RSVPs found.</p></div>
+      </div>
+    </div>
+
+    <!-- ── GUEST LIST TAB ── -->
+    <div id="tab-guestlist" style="display:none">
+      <div class="section-header">
+        <h3>Guest List Management</h3>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input type="file" id="glFile" accept=".xlsx,.csv" style="display:none" onchange="importGuestsFile(this)">
+          <button class="btn-sm" onclick="document.getElementById('glFile').click()">Import Excel</button>
+          <button class="btn-sm" onclick="addGuestPrompt()">+ Add Guest</button>
+          <button class="btn-sm" onclick="exportGuestList()">Export Excel</button>
+        </div>
+      </div>
+      <p style="font-size:.75rem;color:var(--muted);margin:.3rem 0 1rem;">
+        Import a file with two columns — <strong>Name</strong> and <strong>Maximum Allowed Attendees</strong>.
+        Each guest gets a personal invitation link to copy into WhatsApp, SMS or email.
+        Re-importing updates existing guests (matched by name) and keeps their links unchanged.
+      </p>
+
+      <div id="glImportSummary" style="display:none;margin-bottom:1.2rem;"></div>
+
+      <div class="search-bar">
+        <input type="text" id="glSearch" placeholder="Search guests…" oninput="renderGuestList()">
+      </div>
+
+      <div class="table-wrap">
+        <table id="glTable">
+          <thead>
+            <tr>
+              <th style="cursor:pointer" onclick="sortGuestList('name')">Name ⇅</th>
+              <th style="cursor:pointer" onclick="sortGuestList('maxAttendees')">Max ⇅</th>
+              <th style="cursor:pointer" onclick="sortGuestList('selectedAttendees')">Selected ⇅</th>
+              <th style="cursor:pointer" onclick="sortGuestList('status')">RSVP Status ⇅</th>
+              <th>Invitation Link</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="glBody"></tbody>
+        </table>
+        <div class="empty-state hidden" id="glEmpty"><p>No guests yet. Import an Excel file to get started.</p></div>
       </div>
     </div>
 
@@ -402,6 +461,8 @@ function doLogout() {
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(USER_KEY);
   allRsvps = [];
+  allGuests = [];
+  guestListLoaded = false;
   document.getElementById('app').classList.remove('visible');
   document.getElementById('loginOverlay').classList.remove('hidden');
   document.getElementById('loginPassword').value = '';
@@ -481,21 +542,23 @@ async function loadDashboard() {
     document.getElementById('statRate').textContent  = summary.totalRsvps
       ? summary.acceptRate + '%' : '—';
 
-    // Invite links
-    const max = summary.maxAttendees || 0;
+    // Invite links — one generic URL only. Per-guest personalized links (with the
+    // guest's name in the URL) live in the Guest List tab.
     const linksEl = document.getElementById('inviteLinks');
-    if (max && summary.slug) {
-      const base = `${window.location.origin}/index?id=${encodeURIComponent(summary.slug)}`;
-      linksEl.innerHTML = Array.from({length: max}, (_, i) => {
-        const np = i + 1;
-        const url = `${base}&np=${np}`;
-        return `<div class="url-row">
-          <input readonly value="${escHtml(url)}">
+    if (summary.slug) {
+      currentSlug = summary.slug;
+      const url = `${window.location.origin}/index?id=${encodeURIComponent(summary.slug)}`;
+      linksEl.innerHTML = `
+        <p style="font-size:.75rem;color:var(--muted);margin-bottom:.6rem;">
+          Share this generic link with anyone. For named guests with a fixed seat count,
+          use the personalized links in the <strong>Guest List</strong> tab.
+        </p>
+        <div class="url-row" style="max-width:520px;">
+          <input readonly value="${escHtml(url)}" onclick="this.select()">
           <button class="copy-btn" onclick="copyLink(this,'${escHtml(url)}')">Copy</button>
         </div>`;
-      }).join('');
     } else {
-      linksEl.innerHTML = '<p style="font-size:.78rem;color:var(--muted);">No links available — set Max Attendees in Edit Invitation.</p>';
+      linksEl.innerHTML = '<p style="font-size:.78rem;color:var(--muted);">No link available yet.</p>';
     }
 
     // RSVPs
@@ -562,10 +625,12 @@ function renderTable() {
 function switchTab(tab, el) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('tab-guests').style.display  = tab === 'guests'  ? '' : 'none';
-  document.getElementById('tab-edit').style.display    = tab === 'edit'    ? '' : 'none';
-  document.getElementById('tab-account').style.display = tab === 'account' ? '' : 'none';
+  document.getElementById('tab-guests').style.display    = tab === 'guests'    ? '' : 'none';
+  document.getElementById('tab-guestlist').style.display = tab === 'guestlist' ? '' : 'none';
+  document.getElementById('tab-edit').style.display      = tab === 'edit'      ? '' : 'none';
+  document.getElementById('tab-account').style.display   = tab === 'account'   ? '' : 'none';
   if (tab === 'edit' && !invEditData) loadEditForm();
+  if (tab === 'guestlist' && !guestListLoaded) loadGuestList();
 }
 
 // ── Edit form state ──────────────────────────────────────────────
@@ -755,6 +820,201 @@ async function saveInvitation() {
     btn.disabled = false; btn.textContent = 'Save Changes';
   }
 }
+
+// ══════════════════════════════════════════════════════════════════
+// GUEST LIST MANAGEMENT
+// ══════════════════════════════════════════════════════════════════
+let allGuests = [];
+let guestListLoaded = false;
+let glSort = { key: 'name', dir: 1 };
+
+// Personal link now carries the guest's NAME as a slug: /invite/charbel-nahhas
+// (falls back to the legacy token only if a slug hasn't been assigned yet).
+const guestLink = g => `${window.location.origin}/invite/${g.slug || g.token}`;
+const statusLabel = s => s === 'NotAccepted' ? 'Not Accepted' : s;
+
+async function loadGuestList() {
+  try {
+    allGuests = await api('GET', '/api/client/guests') || [];
+    guestListLoaded = true;
+    renderGuestList();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function sortGuestList(key) {
+  if (glSort.key === key) glSort.dir = -glSort.dir;
+  else glSort = { key, dir: 1 };
+  renderGuestList();
+}
+
+function renderGuestList() {
+  const q = (document.getElementById('glSearch').value || '').toLowerCase();
+  const rows = allGuests
+    .filter(g => !q || g.name.toLowerCase().includes(q))
+    .sort((a, b) => {
+      const va = a[glSort.key], vb = b[glSort.key];
+      const cmp = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb));
+      return cmp * glSort.dir;
+    });
+
+  const body = document.getElementById('glBody');
+  document.getElementById('glEmpty').classList.toggle('hidden', allGuests.length > 0);
+
+  body.innerHTML = rows.map(g => {
+    const link = guestLink(g);
+    const badge = g.status === 'Accepted' ? 'badge-yes' : g.status === 'NotAccepted' ? 'badge-no' : 'badge-pending';
+    return `<tr data-gid="${g.id}">
+      <td><input class="gl-input gl-name" value="${escHtml(g.name)}" aria-label="Guest name" oninput="markGuestDirty('${g.id}')"></td>
+      <td><input class="gl-input gl-max" type="number" min="1" max="100" value="${g.maxAttendees}" aria-label="Maximum attendees" oninput="markGuestDirty('${g.id}')"></td>
+      <td class="gl-selected">${g.selectedAttendees}</td>
+      <td><span class="badge ${badge}">${escHtml(statusLabel(g.status))}</span></td>
+      <td class="gl-linkcell"><input class="gl-link" readonly value="${escHtml(link)}" aria-label="Invitation link" onclick="this.select()"></td>
+      <td>
+        <div class="gl-actions">
+          <button class="btn-sm" onclick="copyLink(this,'${escHtml(link)}')">Copy</button>
+          <button class="btn-sm" onclick="window.open('${escHtml(link)}','_blank')">Open</button>
+          <button class="btn-sm save gl-save" style="display:none" onclick="saveGuest('${g.id}')">Save</button>
+          <button class="btn-sm" onclick="regenGuestLink('${g.id}')" title="Issue a new link; the old one stops working">↻</button>
+          <button class="btn-sm danger" onclick="deleteGuest('${g.id}')" title="Delete guest">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function markGuestDirty(id) {
+  const tr = document.querySelector(`tr[data-gid="${id}"]`);
+  if (tr) tr.querySelector('.gl-save').style.display = '';
+}
+
+async function saveGuest(id) {
+  const tr = document.querySelector(`tr[data-gid="${id}"]`);
+  const name = tr.querySelector('.gl-name').value.trim();
+  const max  = parseInt(tr.querySelector('.gl-max').value);
+  if (!name) return toast('Name is required', 'error');
+  if (!max || max < 1) return toast('Max attendees must be at least 1', 'error');
+  try {
+    const updated = await api('PUT', `/api/client/guests/${id}`, { name, maxAttendees: max });
+    const i = allGuests.findIndex(g => g.id === id);
+    if (i >= 0) allGuests[i] = updated;
+    renderGuestList();
+    toast('Guest saved', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteGuest(id) {
+  const g = allGuests.find(x => x.id === id);
+  if (!confirm(`Delete guest "${g ? g.name : ''}"? Their invitation link will stop working.`)) return;
+  try {
+    await api('DELETE', `/api/client/guests/${id}`);
+    allGuests = allGuests.filter(x => x.id !== id);
+    renderGuestList();
+    toast('Guest deleted', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function regenGuestLink(id) {
+  if (!confirm('Generate a new link for this guest? The previously shared link will stop working.')) return;
+  try {
+    const updated = await api('POST', `/api/client/guests/${id}/regenerate-link`);
+    const i = allGuests.findIndex(g => g.id === id);
+    if (i >= 0) allGuests[i] = updated;
+    renderGuestList();
+    toast('New link generated', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function addGuestPrompt() {
+  const name = prompt('Guest name:');
+  if (!name || !name.trim()) return;
+  const max = parseInt(prompt('Maximum allowed attendees:', '2'));
+  if (!max || max < 1) return toast('Max attendees must be a number of at least 1', 'error');
+  try {
+    const created = await api('POST', '/api/client/guests', { name: name.trim(), maxAttendees: max });
+    allGuests.push(created);
+    renderGuestList();
+    toast('Guest added', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ── Excel import ─────────────────────────────────────────────────
+function importGuestsFile(input) {
+  const file = input.files && input.files[0];
+  input.value = '';           // allow re-selecting the same file
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async e => {
+    let rows;
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      // header:1 → array-of-arrays, keeps original row numbers for error reporting
+      rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+    } catch {
+      return toast('Could not read the file. Use .xlsx or .csv.', 'error');
+    }
+    if (!rows.length) return toast('The file is empty.', 'error');
+
+    // Detect a header row ("name" + "max…" style headings) and skip it
+    const first = (rows[0] || []).map(c => String(c == null ? '' : c).toLowerCase());
+    const hasHeader = first.some(c => c.includes('name')) &&
+                      first.some(c => c.includes('max') || c.includes('attend'));
+    const start = hasHeader ? 1 : 0;
+
+    const payload = [];
+    for (let i = start; i < rows.length; i++) {
+      const r = rows[i] || [];
+      if (r.every(c => c == null || String(c).trim() === '')) continue;   // skip blank rows
+      const name = r[0] == null ? null : String(r[0]).trim();
+      const rawMax = r[1];
+      const max = (rawMax == null || String(rawMax).trim() === '' || isNaN(Number(rawMax)))
+        ? null : Math.floor(Number(rawMax));
+      payload.push({ row: i + 1, name, maxAttendees: max });
+    }
+    if (!payload.length) return toast('No data rows found in the file.', 'error');
+
+    try {
+      const result = await api('POST', '/api/client/guests/import', { rows: payload });
+      showImportSummary(result);
+      await loadGuestList();
+    } catch (err) { toast(err.message, 'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showImportSummary(res) {
+  const el = document.getElementById('glImportSummary');
+  const failures = (res.failed || []).map(f =>
+    `<li>Row ${f.row}: ${escHtml(f.reason)}</li>`).join('');
+  el.innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;background:rgba(255,255,255,.02);">
+      <strong style="font-size:.85rem;">Import summary</strong>
+      <p style="font-size:.8rem;margin-top:.4rem;">
+        <span style="color:var(--success)">${res.created} imported</span> ·
+        <span style="color:var(--gold-light,#e8d5b0)">${res.updated} updated</span> ·
+        <span style="color:${(res.failed||[]).length ? 'var(--danger)' : 'var(--muted)'}">${(res.failed||[]).length} failed</span>
+      </p>
+      ${failures ? `<ul style="font-size:.76rem;color:var(--danger);margin:.5rem 0 0 1.1rem;">${failures}</ul>` : ''}
+    </div>`;
+  el.style.display = '';
+}
+
+// ── Excel export ─────────────────────────────────────────────────
+async function exportGuestList() {
+  try { await loadGuestList(); } catch { /* export what we have */ }
+  if (!allGuests.length) return toast('No guests to export', 'error');
+  const rows = [['Name', 'Maximum Allowed Attendees', 'Personalized Invitation Link', 'Selected Attendees', 'RSVP Status']];
+  allGuests.forEach(g => rows.push([g.name, g.maxAttendees, guestLink(g), g.selectedAttendees, statusLabel(g.status)]));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 28 }, { wch: 12 }, { wch: 60 }, { wch: 10 }, { wch: 14 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Guest List');
+  XLSX.writeFile(wb, 'guest-list.xlsx');
+}
+
+// Slug of the currently loaded invitation (used by the generic link).
+let currentSlug = null;
 
 // ── Copy link ────────────────────────────────────────────────────
 function copyLink(btn, url) {

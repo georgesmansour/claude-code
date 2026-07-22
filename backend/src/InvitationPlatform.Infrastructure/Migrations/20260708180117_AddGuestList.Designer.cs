@@ -3,6 +3,7 @@ using System;
 using InvitationPlatform.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace InvitationPlatform.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708180117_AddGuestList")]
+    partial class AddGuestList
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -299,14 +302,6 @@ namespace InvitationPlatform.Infrastructure.Migrations
                         .HasDefaultValue(0)
                         .HasColumnName("selected_attendees");
 
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)")
-                        .HasDefaultValue("")
-                        .HasColumnName("slug");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -328,8 +323,6 @@ namespace InvitationPlatform.Infrastructure.Migrations
                         .HasDefaultValueSql("now()");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Slug");
 
                     b.HasIndex("Token")
                         .IsUnique();
@@ -622,10 +615,6 @@ namespace InvitationPlatform.Infrastructure.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<Guid?>("GuestId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("guest_id");
-
                     b.Property<Guid>("InvitationId")
                         .HasColumnType("uuid")
                         .HasColumnName("invitation_id");
@@ -659,8 +648,6 @@ namespace InvitationPlatform.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
-
-                    b.HasIndex("GuestId");
 
                     b.HasIndex("InvitationId");
 
@@ -886,11 +873,6 @@ namespace InvitationPlatform.Infrastructure.Migrations
 
             modelBuilder.Entity("InvitationPlatform.Domain.Entities.Rsvp", b =>
                 {
-                    b.HasOne("InvitationPlatform.Domain.Entities.Guest", null)
-                        .WithMany()
-                        .HasForeignKey("GuestId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
                     b.HasOne("InvitationPlatform.Domain.Entities.Invitation", "Invitation")
                         .WithMany("Rsvps")
                         .HasForeignKey("InvitationId")

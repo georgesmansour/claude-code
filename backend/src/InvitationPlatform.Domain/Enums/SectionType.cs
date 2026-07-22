@@ -7,5 +7,10 @@ public enum SectionType
     Locations,
     Gifts,
     Rsvp,
-    Custom
+    Custom,
+    Gallery,
+    Timeline,
+    Families,
+    Memories,
+    Music
 }

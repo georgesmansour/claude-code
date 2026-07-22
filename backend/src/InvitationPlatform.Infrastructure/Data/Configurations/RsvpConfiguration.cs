@@ -13,6 +13,7 @@ public class RsvpConfiguration : IEntityTypeConfiguration<Rsvp>
         b.HasKey(e => e.Id);
         b.Property(e => e.Id).HasColumnName("id").HasDefaultValueSql("gen_random_uuid()");
         b.Property(e => e.InvitationId).HasColumnName("invitation_id");
+        b.Property(e => e.GuestId).HasColumnName("guest_id");
         b.Property(e => e.Response).HasColumnName("response")
          .HasConversion<string>()
          .HasDefaultValue(RsvpResponse.Yes);
@@ -27,10 +28,17 @@ public class RsvpConfiguration : IEntityTypeConfiguration<Rsvp>
 
         b.HasIndex(e => e.InvitationId);
         b.HasIndex(e => e.CreatedAt);
+        b.HasIndex(e => e.GuestId);
 
         b.HasOne(e => e.Invitation)
          .WithMany(i => i.Rsvps)
          .HasForeignKey(e => e.InvitationId)
+         .OnDelete(DeleteBehavior.Cascade);
+
+        // Deleting a guest removes their single RSVP record too, keeping the dashboard totals consistent.
+        b.HasOne<Domain.Entities.Guest>()
+         .WithMany()
+         .HasForeignKey(e => e.GuestId)
          .OnDelete(DeleteBehavior.Cascade);
     }
 }

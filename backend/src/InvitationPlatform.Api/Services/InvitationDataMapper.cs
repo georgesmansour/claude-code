@@ -31,7 +31,7 @@ public static class InvitationDataMapper
                     data.Locations = Deserialize<LocationsData>(s.Config) ?? new();
                     SetEnabled(data.Locations, s.Enabled);
                     data.Locations.Items = s.Locations.OrderBy(l => l.OrderIndex)
-                        .Select(l => new LocationItem { Time = l.TimeLabel, Name = l.Name, Addr = l.Address, Url = l.MapUrl })
+                        .Select(l => new LocationItem { Time = l.TimeLabel, Label = l.Label, Name = l.Name, Addr = l.Address, Url = l.MapUrl, Img = l.ImageUrl })
                         .ToList();
                     break;
                 case SectionType.Gifts:
@@ -52,6 +52,11 @@ public static class InvitationDataMapper
                     custom.Enabled = s.Enabled;
                     data.CustomSections.Add(custom);
                     break;
+                case SectionType.Gallery:  data.Gallery  = Deserialize<GalleryData>(s.Config);  SetEnabled(data.Gallery,  s.Enabled); break;
+                case SectionType.Timeline: data.Timeline = Deserialize<TimelineData>(s.Config); SetEnabled(data.Timeline, s.Enabled); break;
+                case SectionType.Families: data.Families = Deserialize<FamiliesData>(s.Config); SetEnabled(data.Families, s.Enabled); break;
+                case SectionType.Memories: data.Memories = Deserialize<MemoriesData>(s.Config); SetEnabled(data.Memories, s.Enabled); break;
+                case SectionType.Music:    data.Music    = Deserialize<MusicData>(s.Config);    SetEnabled(data.Music,    s.Enabled); break;
             }
         }
         return data;
@@ -75,9 +80,11 @@ public static class InvitationDataMapper
                 {
                     OrderIndex = i,
                     TimeLabel = loc.Time,
+                    Label = loc.Label,
                     Name = loc.Name ?? "",
                     Address = loc.Addr,
-                    MapUrl = loc.Url
+                    MapUrl = loc.Url,
+                    ImageUrl = loc.Img
                 });
             }
             inv.Sections.Add(sec);
@@ -100,6 +107,12 @@ public static class InvitationDataMapper
 
         foreach (var c in data.CustomSections ?? [])
             inv.Sections.Add(BuildSection(SectionType.Custom, c, c.Enabled, order++));
+
+        if (data.Gallery  is not null) inv.Sections.Add(BuildSection(SectionType.Gallery,  data.Gallery,  data.Gallery.Enabled,  order++));
+        if (data.Timeline is not null) inv.Sections.Add(BuildSection(SectionType.Timeline, data.Timeline, data.Timeline.Enabled, order++));
+        if (data.Families is not null) inv.Sections.Add(BuildSection(SectionType.Families, data.Families, data.Families.Enabled, order++));
+        if (data.Memories is not null) inv.Sections.Add(BuildSection(SectionType.Memories, data.Memories, data.Memories.Enabled, order++));
+        if (data.Music    is not null) inv.Sections.Add(BuildSection(SectionType.Music,    data.Music,    data.Music.Enabled,    order++));
 
         if (data.Rsvp is not null)
         {

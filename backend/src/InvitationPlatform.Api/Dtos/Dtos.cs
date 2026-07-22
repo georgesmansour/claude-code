@@ -17,6 +17,11 @@ public class InvitationData
     public GiftsData? Gifts { get; set; }
     public RsvpData? Rsvp { get; set; }
     public List<CustomSection>? CustomSections { get; set; }
+    public GalleryData? Gallery { get; set; }
+    public TimelineData? Timeline { get; set; }
+    public FamiliesData? Families { get; set; }
+    public MemoriesData? Memories { get; set; }
+    public MusicData? Music { get; set; }
 }
 
 public class CoverData
@@ -30,6 +35,9 @@ public class CoverData
     public string? HostOutro { get; set; }
     public string? Image { get; set; }
     public string? ButtonText { get; set; }
+    // Elegant Noir envelope screen: "Dear {guest}" prefix + wax-seal image
+    public string? Greeting { get; set; }
+    public string? SealImage { get; set; }
 }
 
 public class CountdownData
@@ -53,9 +61,11 @@ public class LocationsData
 public class LocationItem
 {
     public string? Time { get; set; }
+    public string? Label { get; set; }
     public string? Name { get; set; }
     public string? Addr { get; set; }
     public string? Url { get; set; }
+    public string? Img { get; set; }
 }
 
 public class GiftsData
@@ -82,6 +92,8 @@ public class RsvpData
     public string? Image { get; set; }
     public string? Deadline { get; set; }
     public int MaxPeople { get; set; } = 10;
+    public string? ButtonText { get; set; }
+    public bool AllowWishes { get; set; } = true;
 }
 
 public class CustomSection
@@ -93,6 +105,66 @@ public class CustomSection
     public string? Image { get; set; }
 }
 
+public class GalleryData
+{
+    public bool Enabled { get; set; } = true;
+    public string? Label { get; set; }
+    public string? Title { get; set; }
+    public List<GalleryImage> Items { get; set; } = [];
+}
+
+public class GalleryImage
+{
+    public string? Url { get; set; }
+    public string? Caption { get; set; }
+}
+
+public class TimelineData
+{
+    public bool Enabled { get; set; } = true;
+    public string? Label { get; set; }
+    public string? Title { get; set; }
+    public List<TimelineItem> Items { get; set; } = [];
+}
+
+public class TimelineItem
+{
+    public string? Time { get; set; }
+    public string? Title { get; set; }
+    public string? Subtitle { get; set; }
+    public string? Icon { get; set; }
+}
+
+public class FamiliesData
+{
+    public bool Enabled { get; set; } = true;
+    public string? Label { get; set; }
+    public string? Title { get; set; }
+    public List<FamilyItem> Items { get; set; } = [];
+}
+
+public class FamilyItem
+{
+    public string? Label { get; set; }
+    public string? Names { get; set; }
+}
+
+public class MemoriesData
+{
+    public bool Enabled { get; set; } = true;
+    public string? Title { get; set; }
+    public string? Description { get; set; }
+    public string? Url { get; set; }
+    public string? ButtonText { get; set; }
+}
+
+public class MusicData
+{
+    public bool Enabled { get; set; } = true;
+    public string? Url { get; set; }
+    public bool Autoplay { get; set; } = true;
+}
+
 // ── INVITATION CRUD ────────────────────────────────────────
 public record InvitationListItem(
     Guid Id, string Slug, string Title, string Status,
@@ -101,7 +173,8 @@ public record InvitationListItem(
 public record InvitationFull(
     Guid Id, string Slug, string Title, string Status,
     string? EventType, DateTime? EventDate, int MaxAttendees,
-    Guid? TemplateId, DateTime UpdatedAt, InvitationData Data);
+    Guid? TemplateId, DateTime UpdatedAt, InvitationData Data,
+    string? PublicToken = null);
 
 public record CreateInvitationRequest(
     string Title, string Slug, Guid? TemplateId,
@@ -133,7 +206,8 @@ public record ClientAccountDto(
 public record SubmitRsvpRequest(
     string Response, int PartySize,
     string? ContactName, string? ContactEmail, string? ContactPhone,
-    string? Message, List<RsvpGuestRequest> Guests);
+    string? Message, List<RsvpGuestRequest> Guests,
+    string? GuestToken = null);
 
 public record RsvpGuestRequest(
     string FullName, string? AgeGroup,
@@ -148,6 +222,19 @@ public record RsvpDto(
 public record RsvpGuestDto(
     string FullName, string? AgeGroup,
     string? MealPreference, string? DietaryRestrictions);
+
+// ── GUEST LIST (Bride & Groom dashboard) ───────────────────
+public record GuestDto(
+    Guid Id, string Name, int MaxAttendees, int SelectedAttendees,
+    string Status, string Token, string Slug, DateTime? RespondedAt, DateTime UpdatedAt);
+
+public record ImportGuestRow(int Row, string? Name, int? MaxAttendees);
+public record ImportGuestsRequest(List<ImportGuestRow> Rows);
+public record ImportRowError(int Row, string Reason);
+public record ImportGuestsResult(int Created, int Updated, List<ImportRowError> Failed);
+
+public record CreateGuestRequest(string Name, int MaxAttendees);
+public record UpdateGuestRequest(string Name, int MaxAttendees);
 
 // ── CLIENT SELF-EDIT ───────────────────────────────────────
 public record ClientUpdateInvitationRequest(string Title, InvitationData Data);

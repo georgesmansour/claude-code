@@ -268,6 +268,9 @@ const API_BASE = (typeof window !== 'undefined' && window.API_BASE)
 
 // State holding the slug of the currently-loaded invitation, used by RSVP submit.
 let CURRENT_SLUG = null;
+// Set when opened through a personal guest-list link (?g=<token>):
+// { token, name, maxAttendees, selectedAttendees, status }
+let CURRENT_GUEST = null;
 
 // ── DEFAULT DATA ───────────────────────────────────────
 const DEFAULT_DATA = {
@@ -358,7 +361,26 @@ async function loadData() {
     catch (e) { console.warn('Bad ?d payload:', e); }
   }
 
-  // 2) ?id=<slug> — fetch from the .NET API
+  // 2) ?g=<token> — personal guest-list link: invitation data + guest info in one call
+  const token = params.get('g');
+  if (token) {
+    try {
+      const res = await fetch(`${API_BASE}/api/public/guest/${encodeURIComponent(token)}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const body = await res.json();
+        CURRENT_SLUG  = body.slug;
+        CURRENT_GUEST = Object.assign({ token }, body.guest || {});
+        return mergeDefaults(body.data || {});
+      }
+      console.warn('Guest API returned', res.status);
+    } catch (e) {
+      console.warn('Guest API fetch failed:', e);
+    }
+  }
+
+  // 3) ?id=<slug> — fetch from the .NET API
   const id = params.get('id');
   if (id) {
     CURRENT_SLUG = id;
@@ -383,6 +405,14 @@ async function loadData() {
   }
 
   return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+
+// Personalized invite links carry ?gn=<guest name(s)>, e.g. "Name 1 & Name 2".
+// Guest-list links (?g=<token>) resolve the name from the server instead.
+function getGuestName() {
+  if (CURRENT_GUEST && CURRENT_GUEST.name) return CURRENT_GUEST.name;
+  const v = parseQuery().get('gn');
+  return v ? v.trim() : null;
 }
 
 function getMaxPeopleOverride() {
@@ -559,8 +589,10 @@ function build(data) {
   (data.customSections || []).forEach(s => { if (s.enabled !== false) sections.push(['custom', s]); });
   if (data.rsvp && data.rsvp.enabled !== false) sections.push(['rsvp', data.rsvp]);
 
-  const npOverride = getMaxPeopleOverride();
-  const maxPeople = npOverride || (data.rsvp && data.rsvp.maxPeople) || 10;
+  // Guest-list link wins over manual ?np= parameters
+  const npOverride = CURRENT_GUEST ? null : getMaxPeopleOverride();
+  const maxPeople = (CURRENT_GUEST && CURRENT_GUEST.maxAttendees)
+    || npOverride || (data.rsvp && data.rsvp.maxPeople) || 10;
 
   totalPages = sections.length;
   currentPage = 0;
@@ -656,11 +688,15 @@ function buildNameFields(sel) {
   const n = parseInt(sel.value) || 0;
   const wrap = sel.closest('[data-rsvp]').querySelector('[data-name-fields]');
   wrap.innerHTML = '';
+  // Pre-fill from the personalized link: "A & B" fills guest 1 and 2, etc.
+  const gn = getGuestName();
+  const preNames = gn ? gn.split(/\s*(?:&|,| and )\s*/i).map(s => s.trim()).filter(Boolean) : [];
   for (let i = 0; i < n; i++) {
     const row = document.createElement('div');
     row.className = 'form-group';
     row.innerHTML = `<label class="form-label">Guest ${i + 1} name</label><input class="form-input guest-name" type="text" placeholder="Full name">`;
     wrap.appendChild(row);
+    if (preNames[i]) row.querySelector('input').value = preNames[i];
   }
 }
 
@@ -688,8 +724,10 @@ async function submitRSVP(btn) {
         body: JSON.stringify({
           response: att,
           partySize: att === 'yes' ? parseInt(num) : 0,
+          contactName: getGuestName() || names[0] || null,
           contactPhone: contactPhone,
-          guests: (att === 'yes' ? names : []).map(n => ({ fullName: n }))
+          guests: (att === 'yes' ? names : []).map(n => ({ fullName: n })),
+          guestToken: CURRENT_GUEST ? CURRENT_GUEST.token : null
         })
       });
       if (!res.ok) {

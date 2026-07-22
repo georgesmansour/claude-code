@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<InvitationSection>  InvitationSections  { get; set; }
     public DbSet<Location>           Locations           { get; set; }
     public DbSet<GiftAccount>        GiftAccounts        { get; set; }
+    public DbSet<Guest>              Guests              { get; set; }
     public DbSet<Rsvp>               Rsvps               { get; set; }
     public DbSet<RsvpGuest>          RsvpGuests          { get; set; }
     public DbSet<NotificationSetting> NotificationSettings { get; set; }

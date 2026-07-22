@@ -14,7 +14,9 @@ public class LocationConfiguration : IEntityTypeConfiguration<Location>
         b.Property(e => e.SectionId).HasColumnName("section_id");
         b.Property(e => e.OrderIndex).HasColumnName("order_index").HasDefaultValue(0);
         b.Property(e => e.TimeLabel).HasColumnName("time_label").HasMaxLength(128);
+        b.Property(e => e.Label).HasColumnName("label").HasMaxLength(128);
         b.Property(e => e.Name).HasColumnName("name").HasMaxLength(512).IsRequired();
+        b.Property(e => e.ImageUrl).HasColumnName("image_url");
         b.Property(e => e.Address).HasColumnName("address").HasMaxLength(512);
         b.Property(e => e.MapUrl).HasColumnName("map_url");
         b.Property(e => e.Latitude).HasColumnName("latitude").HasPrecision(9, 6);
