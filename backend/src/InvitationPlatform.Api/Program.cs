@@ -2,6 +2,8 @@ using Scalar.AspNetCore;
 using System.Security.Cryptography;
 using System.Text;
 using InvitationPlatform.Api.Auth;
+using InvitationPlatform.Api.Services.Media;
+using InvitationPlatform.Api.Services.Storage;
 using InvitationPlatform.Domain.Entities;
 using InvitationPlatform.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -94,6 +96,12 @@ builder.Services.AddControllers().AddJsonOptions(o =>
         System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
 });
 builder.Services.AddOpenApi();
+
+// ── Media storage ────────────────────────────────────────────────────
+builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("Storage"));
+builder.Services.Configure<MediaOptions>(builder.Configuration.GetSection("Media"));
+builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+builder.Services.AddScoped<MediaService>();
 
 // ── CORS ─────────────────────────────────────────────────────────────
 builder.Services.AddCors(o => o.AddPolicy("Frontend", p => p

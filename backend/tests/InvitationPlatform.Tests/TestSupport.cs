@@ -1,12 +1,16 @@
 using System.Security.Claims;
 using InvitationPlatform.Api.Auth;
 using InvitationPlatform.Api.Controllers;
+using InvitationPlatform.Api.Services.Media;
+using InvitationPlatform.Api.Services.Storage;
 using InvitationPlatform.Domain.Entities;
 using InvitationPlatform.Domain.Enums;
 using InvitationPlatform.Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace InvitationPlatform.Tests;
 
@@ -93,10 +97,14 @@ internal static class TestSupport
         return new AuthController(db, jwt);
     }
 
+    public static MediaService NewMediaService(AppDbContext db, IFileStorage? storage = null)
+        => new(db, storage ?? new FakeFileStorage(), Options.Create(new MediaOptions()),
+               NullLogger<MediaService>.Instance);
+
     /// <summary>PublicController with a usable HttpContext (IP + headers available).</summary>
     public static PublicController NewPublicController(AppDbContext db)
     {
-        var ctrl = new PublicController(db);
+        var ctrl = new PublicController(db, NewMediaService(db));
         ctrl.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
@@ -126,4 +134,28 @@ internal static class TestSupport
         var ok = Assert.IsType<OkObjectResult>(result);
         return Assert.IsType<T>(ok.Value!);
     }
+}
+
+/// <summary>In-memory <see cref="IFileStorage"/> for tests — no disk touched.</summary>
+internal sealed class FakeFileStorage : IFileStorage
+{
+    private readonly Dictionary<string, byte[]> _files = new();
+    public int Count => _files.Count;
+
+    public Task SaveAsync(string relativePath, Stream content, CancellationToken ct = default)
+    {
+        using var ms = new MemoryStream();
+        content.CopyTo(ms);
+        _files[relativePath] = ms.ToArray();
+        return Task.CompletedTask;
+    }
+
+    public Task<Stream?> OpenReadAsync(string relativePath, CancellationToken ct = default)
+        => Task.FromResult<Stream?>(_files.TryGetValue(relativePath, out var b) ? new MemoryStream(b) : null);
+
+    public Task<bool> DeleteAsync(string relativePath, CancellationToken ct = default)
+        => Task.FromResult(_files.Remove(relativePath));
+
+    public Task<bool> ExistsAsync(string relativePath, CancellationToken ct = default)
+        => Task.FromResult(_files.ContainsKey(relativePath));
 }

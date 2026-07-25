@@ -499,3 +499,36 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+-- Super Admin flag (20260723204500_AddSuperAdminFlag) is reflected inline in admin_accounts above.
+
+-- User-uploaded media (editable, per-invitation). Kept strictly separate from built-in
+-- template assets, which live in the templates' JSON as application-owned URLs and are
+-- never represented in this table.
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260725151200_AddUserMedia') THEN
+    CREATE TABLE user_media (
+        id uuid NOT NULL DEFAULT (gen_random_uuid()),
+        invitation_id uuid NOT NULL,
+        kind character varying(16) NOT NULL,
+        original_file_name character varying(512) NOT NULL,
+        stored_file_name character varying(160) NOT NULL,
+        content_type character varying(128) NOT NULL,
+        byte_size bigint NOT NULL,
+        content_hash character varying(64) NOT NULL,
+        width integer,
+        height integer,
+        created_at timestamp with time zone NOT NULL DEFAULT (now()),
+        CONSTRAINT "PK_user_media" PRIMARY KEY (id),
+        CONSTRAINT "FK_user_media_invitations_invitation_id" FOREIGN KEY (invitation_id) REFERENCES invitations (id) ON DELETE CASCADE
+    );
+    CREATE INDEX "IX_user_media_invitation_id" ON user_media (invitation_id);
+    CREATE UNIQUE INDEX "IX_user_media_invitation_id_content_hash" ON user_media (invitation_id, content_hash);
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260725151200_AddUserMedia', '10.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+

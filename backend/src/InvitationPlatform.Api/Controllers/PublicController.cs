@@ -1,5 +1,6 @@
 using InvitationPlatform.Api.Dtos;
 using InvitationPlatform.Api.Services;
+using InvitationPlatform.Api.Services.Media;
 using InvitationPlatform.Domain.Entities;
 using InvitationPlatform.Domain.Enums;
 using InvitationPlatform.Infrastructure.Data;
@@ -12,8 +13,23 @@ namespace InvitationPlatform.Api.Controllers;
 [ApiController]
 [Route("api/public")]
 [AllowAnonymous]
-public class PublicController(AppDbContext db) : ControllerBase
+public class PublicController(AppDbContext db, MediaService media) : ControllerBase
 {
+    /// <summary>
+    /// Streams a user-uploaded media file. Media is immutable once created (content-addressed),
+    /// so it is served with a long immutable cache header and supports range requests for
+    /// video/audio seeking. Served under /api/* so the existing frontend proxy covers it.
+    /// </summary>
+    [HttpGet("media/{id:guid}")]
+    public async Task<IActionResult> GetMedia(Guid id, CancellationToken ct)
+    {
+        var opened = await media.OpenAsync(id, ct);
+        if (opened is null) return NotFound();
+        var (meta, stream) = opened.Value;
+        Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        return File(stream, meta.ContentType, enableRangeProcessing: true);
+    }
+
     /// <summary>Loads a published invitation by slug or public token.</summary>
     [HttpGet("invitations/{key}")]
     public async Task<IActionResult> GetInvitation(string key)
