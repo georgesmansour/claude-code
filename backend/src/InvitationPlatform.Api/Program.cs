@@ -109,6 +109,37 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 
+    // ── Super Admin ──────────────────────────────────────────────────────
+    // The single highest-privilege account and the ONLY one allowed into the /admin section.
+    // Auto-created on first boot if absent. The password is set only at creation time so a later
+    // self-service change from the admin page is never overwritten on restart.
+    const string superAdminEmail = "cgteam.ai@outlook.com";
+    var superAdmin = await db.AdminAccounts.FirstOrDefaultAsync(a => a.Email == superAdminEmail);
+    if (superAdmin is null)
+    {
+        var superAdminPassword = builder.Configuration["Seed:SuperAdminPassword"] ?? "admin_123";
+        db.AdminAccounts.Add(new AdminAccount
+        {
+            Email = superAdminEmail,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(superAdminPassword),
+            FullName = "Super Admin",
+            IsActive = true,
+            IsSuperAdmin = true
+        });
+        await db.SaveChangesAsync();
+        app.Logger.LogWarning("Seeded Super Admin account: {Email}", superAdminEmail);
+    }
+    else if (!superAdmin.IsSuperAdmin)
+    {
+        // Promote a pre-existing account with this email (e.g. created before this feature shipped).
+        superAdmin.IsSuperAdmin = true;
+        superAdmin.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+    }
+
+    // Legacy fallback: only seed the generic starter admin when the database has NO admins at all.
+    // With the Super Admin seeded above this is now skipped on fresh installs, so no default-
+    // credential admin is created; it remains for backwards compatibility with older databases.
     if (!await db.AdminAccounts.AnyAsync())
     {
         var seedEmail = builder.Configuration["Seed:AdminEmail"] ?? "admin@invitations.local";

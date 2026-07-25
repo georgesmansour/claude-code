@@ -45,7 +45,15 @@
 
   /* LAYOUT */
   .container { display: grid; grid-template-columns: 320px 1fr; gap: 0; min-height: calc(100vh - 64px); }
-  @media (max-width: 800px) { .container { grid-template-columns: 1fr; } }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  @media (max-width: 800px) {
+    .container { grid-template-columns: 1fr; }
+    /* On a phone the sidebar and editor stack; drop the fixed heights so the whole
+       page scrolls as one instead of trapping content in two nested scroll areas. */
+    .sidebar, .editor { max-height: none; overflow: visible; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    .topbar .tabs { width: 100%; overflow-x: auto; }
+  }
 
   /* SIDEBAR */
   .sidebar { background: var(--panel); border-right: 1px solid var(--border); padding: 1rem; overflow-y: auto; max-height: calc(100vh - 64px); }
@@ -147,6 +155,17 @@
   .url-row input { flex: 1; background: transparent; border: none; color: var(--gold-light); font-family: 'Jost', monospace; font-size: .75rem; padding: .55rem .8rem; outline: none; }
   .url-row .btn { border-radius: 0; border: none; border-left: 1px solid var(--border); padding: .55rem .9rem; }
 
+  /* ── MOBILE ── 16px form controls stop iOS Safari zooming on focus; guard against
+     any single wide element pushing the whole page sideways. */
+  @media (max-width: 600px) {
+    html, body { overflow-x: hidden; }
+    .field input, .field textarea, .field select,
+    .search-row input, .url-row input, .login-card input,
+    input, textarea, select { font-size: 16px; }
+    .editor, .sidebar, .panel { padding: 1rem; }
+    .btn { padding: .6rem 1rem; }
+  }
+
   .pill { display: inline-block; font-size: .6rem; letter-spacing: 1.5px; text-transform: uppercase; background: rgba(201,169,110,.15); color: var(--gold-light); padding: 3px 8px; border-radius: 2px; border: 1px solid var(--border); }
   .hidden { display: none !important; }
 
@@ -173,6 +192,15 @@
     <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
     <button id="login-btn" onclick="login()">Sign in</button>
     <p class="api-note">API: <span id="api-endpoint"></span></p>
+  </div>
+</div>
+
+<!-- ── ACCESS DENIED ── (shown when an authenticated non-Super-Admin is refused by the server) -->
+<div id="access-denied" class="hidden">
+  <div class="login-card">
+    <h1>✦ Access Denied</h1>
+    <p>This area is restricted to the Super Administrator. Your account does not have permission to manage invitations.</p>
+    <button id="denied-back-btn" onclick="backToLogin()">Return to sign in</button>
   </div>
 </div>
 
@@ -336,6 +364,11 @@ async function api(method, path, body) {
     showLogin();
     throw new Error('Session expired. Please sign in again.');
   }
+  if (res.status === 403) {
+    // Authenticated but not the Super Admin — the server refused. Never leave the app shell up.
+    showAccessDenied();
+    throw new Error('Access denied. This area is restricted to the Super Administrator.');
+  }
   if (res.status === 204) return null;
 
   let data = null;
@@ -355,8 +388,23 @@ async function api(method, path, body) {
 function showLogin() {
   document.getElementById('login').classList.remove('hidden');
   document.getElementById('app').classList.add('hidden');
+  document.getElementById('access-denied').classList.add('hidden');
   document.getElementById('api-endpoint').textContent = API_BASE || location.origin;
   document.getElementById('login-password').value = '';
+}
+
+// Shown when the server returns 403: authenticated, but not the Super Admin.
+function showAccessDenied() {
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('access-denied').classList.remove('hidden');
+}
+
+// Clear the (non-privileged) session and return to the sign-in screen.
+function backToLogin() {
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  showLogin();
 }
 
 function showApp() {
@@ -379,6 +427,9 @@ async function login() {
     const res = await api('POST', '/api/auth/admin/login', { email, password });
     sessionStorage.setItem(TOKEN_KEY, res.token);
     sessionStorage.setItem(USER_KEY, JSON.stringify({ email, fullName: res.fullName, role: res.role }));
+    // Server-side authorization is the real gate (every /admin call is role-checked); this is
+    // just UX so a non-Super-Admin lands on the Access Denied screen instead of a broken shell.
+    if (res.role !== 'SuperAdmin') { showAccessDenied(); return; }
     showApp();
   } catch (e) {
     err.textContent = e.message;
@@ -552,8 +603,6 @@ function renderEditor() {
       </div>
     </div>
 
-    ${renderInviteLinks(inv)}
-
     <div id="client-account-card"></div>
 
     ${renderSection('cover', 'Cover Page', d.cover, [
@@ -630,27 +679,9 @@ function renderEditor() {
   renderClientAccountCard();
 }
 
-function renderInviteLinks(inv) {
-  const max = parseInt(inv.maxAttendees) || 0;
-  if (!max || !inv.slug) return '';
-  const base = `${location.origin}/index?id=${encodeURIComponent(inv.slug)}`;
-  const rows = Array.from({length: max}, (_, i) => {
-    const np = i + 1;
-    const url = `${base}&np=${np}`;
-    return `<div class="url-row" style="margin-bottom:6px;">
-      <input value="${esc(url)}" readonly>
-      <button class="btn" onclick="copy('${esc(url)}')">Copy</button>
-    </div>`;
-  }).join('');
-  return `
-    <div class="section">
-      <div class="section-header"><h2>Invitation Links — ${max} Guest Link${max !== 1 ? 's' : ''}</h2></div>
-      <div class="section-body" style="grid-template-columns:1fr;">
-        <p class="field-help" style="grid-column:1/-1;">One link per guest/family. Each link pre-selects their party size in the RSVP form.</p>
-        ${rows}
-      </div>
-    </div>`;
-}
+// NOTE: Per-guest personal links (name-based, one per guest) are created and shared from the
+// couple's dashboard Guest List, which is the single global invitation-URL mechanism. The admin
+// editor intentionally exposes only the one public invitation URL above (the "Public Link" slug).
 
 function onTitleChange(val) {
   if (!currentInv) return;
@@ -1241,6 +1272,7 @@ async function loadRsvps() {
       </div>`;
     if (!rsvps.length) { list.innerHTML = '<div class="empty-state">No RSVPs yet.</div>'; return; }
     list.innerHTML = `
+      <div class="table-wrap">
       <table class="rsvp-table">
         <thead><tr><th>When</th><th>Response</th><th>Party</th><th>Guests</th><th>Phone</th></tr></thead>
         <tbody>
@@ -1249,11 +1281,12 @@ async function loadRsvps() {
               <td>${new Date(r.createdAt).toLocaleString()}</td>
               <td><span class="badge">${esc(r.response)}</span></td>
               <td>${r.partySize}</td>
-              <td>${r.guests.map(g => esc(g.fullName)).join(', ') || '—'}</td>
+              <td>${(r.guests || []).map(g => esc(g.fullName)).join(', ') || (r.contactName ? esc(r.contactName) : '—')}</td>
               <td>${esc(r.contactPhone || '—')}</td>
             </tr>`).join('')}
         </tbody>
-      </table>`;
+      </table>
+      </div>`;
   } catch (e) { toast(e.message, 'error'); }
 }
 
@@ -1265,7 +1298,7 @@ function exportRsvpExcel() {
     rows.push([
       r.response,
       r.partySize,
-      (r.guests || []).map(g => g.fullName).join(', '),
+      (r.guests || []).map(g => g.fullName).join(', ') || r.contactName || '',
       r.contactPhone || '',
       r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''
     ]);
@@ -1311,8 +1344,14 @@ async function changeAdminEmail() {
 // ════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('api-endpoint').textContent = API_BASE || location.origin;
-  if (sessionStorage.getItem(TOKEN_KEY)) showApp();
-  else showLogin();
+  if (sessionStorage.getItem(TOKEN_KEY)) {
+    // Resume only a Super Admin session; the server re-checks every request regardless.
+    const u = JSON.parse(sessionStorage.getItem(USER_KEY) || '{}');
+    if (u.role === 'SuperAdmin') showApp();
+    else showAccessDenied();
+  } else {
+    showLogin();
+  }
 });
 </script>
 </body>

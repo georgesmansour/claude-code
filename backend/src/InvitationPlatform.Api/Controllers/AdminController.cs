@@ -14,7 +14,10 @@ namespace InvitationPlatform.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = "Admin")]
+// Only the Super Admin may reach the /admin section. Enforced server-side on every request:
+// the [Authorize] filter runs before any action, so a missing/expired token yields 401 and any
+// authenticated non-SuperAdmin (regular admin, client, guest) yields 403 Forbidden.
+[Authorize(Roles = "SuperAdmin")]
 public class AdminController(AppDbContext db) : ControllerBase
 {
     private Guid CurrentAdminId =>

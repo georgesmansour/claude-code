@@ -302,6 +302,13 @@
   }
 
   .hidden { display: none !important; }
+
+  /* ── MOBILE ── Raise form controls to 16px so iOS Safari doesn't zoom-in on focus,
+     and keep inputs/buttons at a comfortable 44px+ touch target. */
+  @media (max-width: 640px) {
+    .rsvp-input, .rsvp-select, .rsvp-textarea { font-size: 16px; }
+    .rsvp-input, .rsvp-select { min-height: 48px; }
+  }
 </style>
 </head>
 <body>

@@ -24,8 +24,11 @@ public class AuthController(AppDbContext db, JwtTokenService jwt) : ControllerBa
         admin.LastLoginAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
-        var token = jwt.CreateToken(admin.Id, admin.Email, "Admin", admin.FullName);
-        return Ok(new LoginResponse(token, "Admin", admin.FullName, false));
+        // Super Admins get the elevated role that unlocks the /admin section; every other
+        // admin authenticates but stays on the ordinary "Admin" role (no /admin access).
+        var role = admin.IsSuperAdmin ? "SuperAdmin" : "Admin";
+        var token = jwt.CreateToken(admin.Id, admin.Email, role, admin.FullName);
+        return Ok(new LoginResponse(token, role, admin.FullName, false));
     }
 
     [HttpPost("client/login")]
@@ -93,7 +96,7 @@ public class AuthController(AppDbContext db, JwtTokenService jwt) : ControllerBa
     }
 
     [HttpPost("admin/change-password")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<IActionResult> ChangeAdminPassword([FromBody] ChangePasswordRequest req)
     {
         var adminId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
@@ -113,7 +116,7 @@ public class AuthController(AppDbContext db, JwtTokenService jwt) : ControllerBa
     }
 
     [HttpPost("admin/change-email")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<IActionResult> ChangeAdminEmail([FromBody] ChangeEmailRequest req)
     {
         var adminId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);

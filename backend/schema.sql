@@ -23,6 +23,7 @@ BEGIN
         password_hash text NOT NULL,
         full_name character varying(256) NOT NULL,
         is_active boolean NOT NULL DEFAULT TRUE,
+        is_super_admin boolean NOT NULL DEFAULT FALSE,
         last_login_at timestamp with time zone,
         created_at timestamp with time zone NOT NULL DEFAULT (now()),
         updated_at timestamp with time zone NOT NULL DEFAULT (now()),

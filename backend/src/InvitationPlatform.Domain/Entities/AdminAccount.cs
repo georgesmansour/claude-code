@@ -7,6 +7,12 @@ public class AdminAccount
     public string PasswordHash { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Highest privilege level. Only Super Admins may access the /admin section; a regular
+    /// admin cannot grant themselves this flag through the API, preventing privilege escalation.
+    /// </summary>
+    public bool IsSuperAdmin { get; set; } = false;
     public DateTime? LastLoginAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

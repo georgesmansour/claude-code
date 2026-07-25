@@ -160,8 +160,19 @@
     main { padding: 1.2rem .9rem; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .inv-banner { flex-direction: column; align-items: flex-start; }
+    .inv-banner .actions, .btn-view { width: 100%; text-align: center; }
     .edit-grid { grid-template-columns: 1fr; }
+    /* Full-width, wrapping tab bar instead of a row that overflows off-screen. */
+    .tabs-nav { flex-wrap: wrap; }
+    .tab-btn { padding: .6rem 1rem; }
+    /* 16px form controls stop iOS Safari zooming in on focus; keep a 44px touch target. */
+    .card input, .search-bar input, .edit-field input, .edit-field textarea,
+    .gl-input, .gl-link, select, input, textarea { font-size: 16px; }
+    .btn-sm { padding: .5rem .9rem; }
+    .gl-actions .btn-sm { padding: .5rem .8rem; font-size: .7rem; }
   }
+  /* Never let a wide element push the whole page sideways on a phone. */
+  @media (max-width: 600px) { html, body { overflow-x: hidden; } }
 </style>
 </head>
 <body>
@@ -579,6 +590,18 @@ function setFilter(f, el) {
   renderTable();
 }
 
+// Display name(s) for an RSVP row. Accepts bring per-attendee rows; declines bring none,
+// so we fall back to the contact name the guest submitted (or their guest-list name).
+// This is why a declined RSVP must never render as "—" when a name is on record.
+function rsvpNames(r) {
+  return (r.guests || []).map(g => g.fullName).filter(Boolean);
+}
+function rsvpDisplayName(r) {
+  const names = rsvpNames(r);
+  if (names.length) return names.join(', ');
+  return (r.contactName || '').trim();
+}
+
 function renderTable() {
   const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
   let rows = allRsvps;
@@ -588,7 +611,7 @@ function renderTable() {
 
   if (q)
     rows = rows.filter(r => {
-      const names = (r.guests || []).map(g => g.fullName).join(' ');
+      const names = rsvpDisplayName(r);
       return names.toLowerCase().includes(q) ||
              (r.contactPhone || '').toLowerCase().includes(q);
     });
@@ -607,7 +630,10 @@ function renderTable() {
     const resp = (r.response || '').toLowerCase();
     const badgeCls = resp === 'yes' ? 'badge-yes' : 'badge-no';
     const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-    const guestNames = (r.guests || []).map(g => `<div class="guest-row">• ${escHtml(g.fullName)}</div>`).join('');
+    const names = rsvpNames(r);
+    const guestNames = names.length
+      ? names.map(n => `<div class="guest-row">• ${escHtml(n)}</div>`).join('')
+      : (r.contactName ? `<div class="guest-row">${escHtml(r.contactName)}</div>` : '');
 
     return `<tr>
       <td>
@@ -1031,7 +1057,7 @@ function exportGuestsExcel() {
   const rows = [['Guests', 'Response', 'Party Size', 'Phone', 'Date']];
   allRsvps.forEach(r => {
     rows.push([
-      (r.guests || []).map(g => g.fullName).join(', ') || '—',
+      rsvpDisplayName(r) || '—',
       r.response || '—',
       r.partySize ?? 0,
       r.contactPhone || '',

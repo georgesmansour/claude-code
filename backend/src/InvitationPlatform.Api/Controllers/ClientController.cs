@@ -298,10 +298,16 @@ public class ClientController(AppDbContext db) : ControllerBase
             g.InvitationId == CurrentInvitationId && g.Id != id && g.Name.ToLower() == name.ToLower());
         if (duplicate) return Conflict(new { error = "Another guest already has this name" });
 
+        // The personal URL is name-based, so it must track the name. Regenerate the slug
+        // whenever the name changes (or when a legacy row has none yet), keeping it globally
+        // unique. Compare on the base slug so cosmetic edits that don't affect the URL
+        // (e.g. trailing spaces, punctuation, case) don't needlessly churn the shared link.
+        var slugMissing = string.IsNullOrEmpty(guest.Slug);
+        var slugStale   = SlugHelper.Slugify(name) != SlugHelper.Slugify(guest.Name);
+
         guest.Name = name;
         guest.MaxAttendees = req.MaxAttendees;
-        // The slug (and shared link) stays stable across renames; only assign one if missing (legacy row).
-        if (string.IsNullOrEmpty(guest.Slug))
+        if (slugMissing || slugStale)
             guest.Slug = await UniqueSlugAsync(name, guest.Id);
         guest.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();

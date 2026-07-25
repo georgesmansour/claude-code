@@ -169,7 +169,11 @@ public class PublicController(AppDbContext db) : ControllerBase
         rsvp.GuestId = guest?.Id;
         rsvp.Response = response;
         rsvp.PartySize = partySize;
-        rsvp.ContactName = req.ContactName ?? guest?.Name;
+        // Always keep a display name on the RSVP. A decline sends no per-attendee rows, so the
+        // dashboard falls back to ContactName — it must never be blank when we know the guest.
+        // "??" only guards null, so trim first and treat an empty/whitespace name as missing.
+        var submittedName = req.ContactName?.Trim();
+        rsvp.ContactName = string.IsNullOrEmpty(submittedName) ? guest?.Name : submittedName;
         rsvp.ContactEmail = req.ContactEmail;
         rsvp.ContactPhone = req.ContactPhone;
         rsvp.Message = req.Message;
