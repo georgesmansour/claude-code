@@ -49,8 +49,10 @@
     }
 
     const inv = await res.json();
-    // templateKey comes from the API (derived from template name, e.g. "classic-wedding")
-    const key = (inv.templateKey || 'classic-wedding').toLowerCase().replace(/\s+/g, '-');
+    // templateKey comes from the API (derived from template name, e.g. "elegant-noir")
+    let key = (inv.templateKey || 'serene-beige').toLowerCase().replace(/\s+/g, '-');
+    // The Classic Wedding template was retired — render any legacy invitation on it as Serene Beige.
+    if (key === 'classic-wedding') key = 'serene-beige';
 
     // Build the target query, preserving personalization params (np, name, spouse, max, gn).
     const target = new URLSearchParams(params);

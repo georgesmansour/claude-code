@@ -210,21 +210,32 @@ public class AdminController(AppDbContext db) : ControllerBase
     [HttpPost("clients")]
     public async Task<IActionResult> CreateClient([FromBody] CreateClientRequest req)
     {
-        if (await db.ClientAccounts.AnyAsync(c => c.InvitationId == req.InvitationId))
-            return Conflict(new { error = "This invitation already has a client account" });
-        if (await db.ClientAccounts.AnyAsync(c => c.Email == req.Email))
-            return Conflict(new { error = "Email already in use" });
+        var email = ContactHelper.NormalizeEmail(req.Email);
+        var phone = ContactHelper.NormalizePhone(req.Phone);
+
+        // A client must be reachable by at least one method.
+        if (email is null && phone is null)
+            return BadRequest(new { error = "Provide at least an email address or a phone number" });
+        if (email is not null && !ContactHelper.IsValidEmail(email))
+            return BadRequest(new { error = "Please enter a valid email address" });
         if (req.Password.Length < 6)
             return BadRequest(new { error = "Password must be at least 6 characters" });
+
+        if (await db.ClientAccounts.AnyAsync(c => c.InvitationId == req.InvitationId))
+            return Conflict(new { error = "This invitation already has a client account" });
+        if (email is not null && await db.ClientAccounts.AnyAsync(c => c.Email == email))
+            return Conflict(new { error = "Email already in use" });
+        if (phone is not null && await db.ClientAccounts.AnyAsync(c => c.Phone == phone))
+            return Conflict(new { error = "Phone number already in use" });
 
         var client = new ClientAccount
         {
             InvitationId = req.InvitationId,
             CreatedBy = CurrentAdminId,
-            Email = req.Email,
+            Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
             FullName = req.FullName,
-            Phone = req.Phone,
+            Phone = phone,
             MustChangePassword = true
         };
         db.ClientAccounts.Add(client);
@@ -238,13 +249,31 @@ public class AdminController(AppDbContext db) : ControllerBase
         var client = await db.ClientAccounts.FindAsync(id);
         if (client is null) return NotFound();
 
-        if (!string.IsNullOrWhiteSpace(req.NewEmail))
+        // Only touch a contact field when its key was supplied (null = leave unchanged).
+        if (req.NewEmail is not null)
         {
-            var email = req.NewEmail.Trim().ToLowerInvariant();
-            if (await db.ClientAccounts.AnyAsync(c => c.Email == email && c.Id != id))
-                return BadRequest(new { error = "Email already in use" });
+            var email = ContactHelper.NormalizeEmail(req.NewEmail);
+            if (email is not null)
+            {
+                if (!ContactHelper.IsValidEmail(email))
+                    return BadRequest(new { error = "Please enter a valid email address" });
+                if (await db.ClientAccounts.AnyAsync(c => c.Email == email && c.Id != id))
+                    return BadRequest(new { error = "Email already in use" });
+            }
             client.Email = email;
         }
+
+        if (req.NewPhone is not null)
+        {
+            var phone = ContactHelper.NormalizePhone(req.NewPhone);
+            if (phone is not null && await db.ClientAccounts.AnyAsync(c => c.Phone == phone && c.Id != id))
+                return BadRequest(new { error = "Phone number already in use" });
+            client.Phone = phone;
+        }
+
+        // Never leave a client with no way to log in.
+        if (client.Email is null && client.Phone is null)
+            return BadRequest(new { error = "A client must keep at least an email or a phone number" });
 
         if (!string.IsNullOrWhiteSpace(req.NewPassword))
         {

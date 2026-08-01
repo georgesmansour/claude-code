@@ -1,5 +1,7 @@
 using InvitationPlatform.Api.Auth;
 using InvitationPlatform.Api.Dtos;
+using InvitationPlatform.Api.Services;
+using InvitationPlatform.Domain.Entities;
 using InvitationPlatform.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,8 +37,21 @@ public class AuthController(AppDbContext db, JwtTokenService jwt) : ControllerBa
     [AllowAnonymous]
     public async Task<IActionResult> ClientLogin([FromBody] LoginRequest req)
     {
-        var client = await db.ClientAccounts
-            .FirstOrDefaultAsync(c => c.Email == req.Email && c.IsActive);
+        // A single login field accepts either an email or a phone number; we detect which and
+        // look up the matching account. (LoginRequest.Email carries whatever the user typed.)
+        var identifier = req.Email?.Trim() ?? "";
+        ClientAccount? client;
+        if (ContactHelper.LooksLikeEmail(identifier))
+        {
+            var email = ContactHelper.NormalizeEmail(identifier);
+            client = await db.ClientAccounts.FirstOrDefaultAsync(c => c.Email == email && c.IsActive);
+        }
+        else
+        {
+            var phone = ContactHelper.NormalizePhone(identifier);
+            client = phone is null ? null
+                : await db.ClientAccounts.FirstOrDefaultAsync(c => c.Phone == phone && c.IsActive);
+        }
 
         if (client is null || !BCrypt.Net.BCrypt.Verify(req.Password, client.PasswordHash))
             return Unauthorized(new { error = "Invalid credentials" });
@@ -44,7 +59,7 @@ public class AuthController(AppDbContext db, JwtTokenService jwt) : ControllerBa
         client.LastLoginAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
-        var token = jwt.CreateToken(client.Id, client.Email, "Client", client.FullName, client.InvitationId);
+        var token = jwt.CreateToken(client.Id, client.Email ?? client.Phone ?? "", "Client", client.FullName, client.InvitationId);
         return Ok(new LoginResponse(token, "Client", client.FullName, client.MustChangePassword));
     }
 

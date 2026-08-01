@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using InvitationPlatform.Api.Auth;
 using InvitationPlatform.Api.Services.Media;
+using InvitationPlatform.Api.Services.Seeding;
 using InvitationPlatform.Api.Services.Storage;
 using InvitationPlatform.Domain.Entities;
 using InvitationPlatform.Infrastructure.Data;
@@ -103,6 +104,10 @@ builder.Services.Configure<MediaOptions>(builder.Configuration.GetSection("Media
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.AddScoped<MediaService>();
 
+// ── Seeding (Super Admin credentials from config via the Options pattern) ─────
+builder.Services.Configure<SuperAdminSettings>(builder.Configuration.GetSection("SuperAdmin"));
+builder.Services.AddScoped<DatabaseSeeder>();
+
 // ── CORS ─────────────────────────────────────────────────────────────
 builder.Services.AddCors(o => o.AddPolicy("Frontend", p => p
     .SetIsOriginAllowed(_ => true)         // simplest for dev; tighten for prod
@@ -117,156 +122,9 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 
-    // ── Super Admin ──────────────────────────────────────────────────────
-    // The single highest-privilege account and the ONLY one allowed into the /admin section.
-    // Auto-created on first boot if absent. The password is set only at creation time so a later
-    // self-service change from the admin page is never overwritten on restart.
-    const string superAdminEmail = "cgteam.ai@outlook.com";
-    var superAdmin = await db.AdminAccounts.FirstOrDefaultAsync(a => a.Email == superAdminEmail);
-    if (superAdmin is null)
-    {
-        var superAdminPassword = builder.Configuration["Seed:SuperAdminPassword"] ?? "admin_123";
-        db.AdminAccounts.Add(new AdminAccount
-        {
-            Email = superAdminEmail,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(superAdminPassword),
-            FullName = "Super Admin",
-            IsActive = true,
-            IsSuperAdmin = true
-        });
-        await db.SaveChangesAsync();
-        app.Logger.LogWarning("Seeded Super Admin account: {Email}", superAdminEmail);
-    }
-    else if (!superAdmin.IsSuperAdmin)
-    {
-        // Promote a pre-existing account with this email (e.g. created before this feature shipped).
-        superAdmin.IsSuperAdmin = true;
-        superAdmin.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-    }
-
-    // Legacy fallback: only seed the generic starter admin when the database has NO admins at all.
-    // With the Super Admin seeded above this is now skipped on fresh installs, so no default-
-    // credential admin is created; it remains for backwards compatibility with older databases.
-    if (!await db.AdminAccounts.AnyAsync())
-    {
-        var seedEmail = builder.Configuration["Seed:AdminEmail"] ?? "admin@invitations.local";
-        var seedPassword = builder.Configuration["Seed:AdminPassword"] ?? "Admin123!";
-        db.AdminAccounts.Add(new AdminAccount
-        {
-            Email = seedEmail,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedPassword),
-            FullName = "Initial Admin",
-            IsActive = true
-        });
-        await db.SaveChangesAsync();
-        app.Logger.LogWarning("Seeded initial admin: {Email}  (password: {Password})", seedEmail, seedPassword);
-    }
-
-    // Seed builtin templates individually (by name) so new templates reach existing databases too.
-    {
-        var firstAdminId = await db.AdminAccounts.OrderBy(a => a.CreatedAt).Select(a => a.Id).FirstAsync();
-
-        if (!await db.Templates.AnyAsync(t => t.Name == "Classic Wedding"))
-        {
-            db.Templates.Add(new Template
-            {
-                CreatedBy = firstAdminId,
-                Name = "Classic Wedding",
-                Description = "Elegant gold-accented wedding invitation",
-                IsBuiltin = true,
-                IsActive = true,
-                Data = """
-                {
-                  "title": "New Invitation",
-                  "cover": { "enabled": true, "eventLabel": "Wedding", "names": "Name & Name", "tagline": "Are getting married", "hostText": "Host Families", "hostIntro": "With heartfelt joy,", "hostOutro": "invite you to celebrate", "image": "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800&q=80", "buttonText": "Open Invitation" },
-                  "countdown": { "enabled": true, "label": "Save the date", "date": "", "description": "Join us as we begin our forever.", "image": "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80" },
-                  "locations": { "enabled": true, "label": "The Celebration", "title": "Where & When", "image": "https://images.unsplash.com/photo-1478147427282-58a87a702b70?w=800&q=80", "items": [] },
-                  "gifts": { "enabled": false, "label": "Gift Registry", "title": "With Love", "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=800&q=80", "description": "Your love and presence is the greatest gift.", "items": [] },
-                  "rsvp": { "enabled": true, "label": "Be Our Guest", "title": "RSVP", "image": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&q=80", "deadline": "", "maxPeople": 10 },
-                  "customSections": []
-                }
-                """
-            });
-        }
-
-        if (!await db.Templates.AnyAsync(t => t.Name == "Elegant Noir"))
-        {
-            db.Templates.Add(new Template
-            {
-                CreatedBy = firstAdminId,
-                Name = "Elegant Noir",
-                Description = "Dark scrolling invitation with script typography, envelope opening, gallery, timeline and music",
-                IsBuiltin = true,
-                IsActive = true,
-                Data = """
-                {
-                  "title": "New Invitation",
-                  "cover": { "enabled": true, "eventLabel": "Wedding", "names": "Name & Name", "tagline": "Are getting married", "greeting": "Dear", "hostText": "", "image": "", "sealImage": "", "buttonText": "Tap to open" },
-                  "countdown": { "enabled": true, "label": "Save the date", "date": "", "description": "Venue name, City", "image": "" },
-                  "families": { "enabled": true, "label": "Together with their families", "title": "", "items": [] },
-                  "gallery": { "enabled": true, "label": "Before forever", "title": "A glimpse of us", "items": [] },
-                  "locations": { "enabled": true, "label": "Join us", "title": "The Celebration", "image": "", "items": [] },
-                  "timeline": { "enabled": true, "label": "The day", "title": "Wedding Timeline", "items": [] },
-                  "gifts": { "enabled": false, "label": "With love", "title": "Gift Registry", "description": "Your presence is the greatest gift. For those who wish, a wedding list is available:", "items": [] },
-                  "rsvp": { "enabled": true, "label": "Kindly reply by", "title": "Will you join us?", "deadline": "", "maxPeople": 10, "buttonText": "Send RSVP", "allowWishes": true },
-                  "memories": { "enabled": false, "title": "Share Your Memories", "description": "During or after the event, open the link below to share your photos with us", "url": "", "buttonText": "Share Memories" },
-                  "music": { "enabled": false, "url": "", "autoplay": true },
-                  "customSections": []
-                }
-                """
-            });
-        }
-
-        if (!await db.Templates.AnyAsync(t => t.Name == "Serene Beige"))
-        {
-            db.Templates.Add(new Template
-            {
-                CreatedBy = firstAdminId,
-                Name = "Serene Beige",
-                Description = "Light beige scrolling invitation with monogram hero, calendar card, split venue details, timeline, gallery and music",
-                IsBuiltin = true,
-                IsActive = true,
-                Data = """
-                {
-                  "title": "New Invitation",
-                  "cover": { "enabled": true, "eventLabel": "", "names": "Name & Name", "tagline": "Request the honor of your presence at their wedding", "hostIntro": "And the two shall become one", "hostOutro": "Mark 10: 8-9", "image": "", "buttonText": "" },
-                  "countdown": { "enabled": true, "label": "Save the date", "date": "", "description": "", "image": "" },
-                  "families": { "enabled": true, "label": "", "title": "", "items": [] },
-                  "locations": { "enabled": true, "label": "Where & When", "title": "", "image": "", "items": [] },
-                  "timeline": { "enabled": true, "label": "The day", "title": "Timeline", "items": [] },
-                  "gallery": { "enabled": true, "label": "", "title": "Captured Moments", "items": [] },
-                  "gifts": { "enabled": false, "label": "", "title": "Wedding Gift", "description": "Your presence is the best gift. Should you feel inclined, a list is available via Whish Money.", "items": [] },
-                  "rsvp": { "enabled": true, "label": "Be our guest", "title": "RSVP", "deadline": "", "maxPeople": 10, "buttonText": "Send Response", "allowWishes": true },
-                  "memories": { "enabled": false, "title": "Share Your Memories", "description": "During or after the event, open the link below to share your photos with us", "url": "", "buttonText": "Share Memories" },
-                  "music": { "enabled": false, "url": "", "autoplay": true },
-                  "customSections": []
-                }
-                """
-            });
-        }
-
-        await db.SaveChangesAsync();
-    }
-
-    // Backfill name-based slugs for any guests created before slugs existed, so their
-    // personal links (and the new /invite/<name> URLs) work without a manual migration.
-    var slugless = await db.Guests.Where(g => g.Slug == "" || g.Slug == null).ToListAsync();
-    if (slugless.Count > 0)
-    {
-        var taken = (await db.Guests.Select(g => g.Slug).ToListAsync())
-            .Where(s => !string.IsNullOrEmpty(s)).ToHashSet();
-        foreach (var g in slugless)
-        {
-            var baseSlug = InvitationPlatform.Api.Services.SlugHelper.Slugify(g.Name);
-            var candidate = baseSlug;
-            var n = 2;
-            while (!taken.Add(candidate)) candidate = $"{baseSlug}-{n++}";
-            g.Slug = candidate;
-        }
-        await db.SaveChangesAsync();
-        app.Logger.LogInformation("Backfilled name-based slugs for {Count} guest(s).", slugless.Count);
-    }
+    // All idempotent seeding (Super Admin from config, built-in templates, guest-slug backfill)
+    // lives in DatabaseSeeder — see Services/Seeding.
+    await scope.ServiceProvider.GetRequiredService<DatabaseSeeder>().SeedAsync();
 }
 
 if (app.Environment.IsDevelopment())

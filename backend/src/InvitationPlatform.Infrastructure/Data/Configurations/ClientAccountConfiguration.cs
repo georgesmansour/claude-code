@@ -8,12 +8,13 @@ public class ClientAccountConfiguration : IEntityTypeConfiguration<ClientAccount
 {
     public void Configure(EntityTypeBuilder<ClientAccount> b)
     {
-        b.ToTable("client_accounts");
+        b.ToTable("client_accounts", t => t.HasCheckConstraint(
+            "CK_client_accounts_contact", "email IS NOT NULL OR phone IS NOT NULL"));
         b.HasKey(e => e.Id);
         b.Property(e => e.Id).HasColumnName("id").HasDefaultValueSql("gen_random_uuid()");
         b.Property(e => e.InvitationId).HasColumnName("invitation_id");
         b.Property(e => e.CreatedBy).HasColumnName("created_by");
-        b.Property(e => e.Email).HasColumnName("email").HasMaxLength(256).IsRequired();
+        b.Property(e => e.Email).HasColumnName("email").HasMaxLength(256);
         b.Property(e => e.PasswordHash).HasColumnName("password_hash").IsRequired();
         b.Property(e => e.FullName).HasColumnName("full_name").HasMaxLength(256).IsRequired();
         b.Property(e => e.Phone).HasColumnName("phone").HasMaxLength(64);
@@ -23,7 +24,10 @@ public class ClientAccountConfiguration : IEntityTypeConfiguration<ClientAccount
         b.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
         b.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");
 
+        // Both contact methods are unique when present (a login identifier must resolve to one
+        // account). Postgres unique indexes allow multiple NULLs, so unset methods don't collide.
         b.HasIndex(e => e.Email).IsUnique();
+        b.HasIndex(e => e.Phone).IsUnique();
         b.HasIndex(e => e.InvitationId).IsUnique(); // 1:1 with invitation
 
         b.HasOne(e => e.Invitation)

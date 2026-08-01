@@ -29,21 +29,6 @@
 
   h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 500; color: var(--text-main); }
 
-  /* ── TOP NAV (music) ── */
-  .top-nav {
-    position: fixed; top: 20px; right: 20px; z-index: 1000;
-  }
-  .music-toggle {
-    display: none;
-    background: rgba(253,251,247,.85);
-    backdrop-filter: blur(5px);
-    border: 1px solid var(--border-light);
-    padding: 8px 14px; border-radius: 30px;
-    cursor: pointer; font-size: 16px; color: var(--text-main);
-    box-shadow: 0 4px 10px rgba(0,0,0,.05);
-    transition: all .3s ease;
-  }
-
   /* ── HERO ── */
   .hero {
     height: 100vh;
@@ -298,10 +283,7 @@
 </head>
 <body>
 
-<div class="top-nav">
-  <button class="music-toggle" id="musicBtn" aria-label="Toggle music">♪</button>
-</div>
-<audio id="bgMusic" loop preload="none"></audio>
+<script src="./invitation-music.js" defer></script>
 
 <main id="main"></main>
 
@@ -365,6 +347,12 @@ const esc = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const nl2br = s => esc(s).replace(/\n/g, '<br>');
+// Format a yyyy-MM-dd deadline as a readable date; falls back to the raw string.
+function fmtDate(s) {
+  if (!s) return '';
+  const dt = new Date(/^\d{4}-\d{2}-\d{2}$/.test(s) ? s + 'T00:00:00' : s);
+  return isNaN(dt) ? s : dt.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
 
 // ── DATA LOADING ───────────────────────────────────────
 async function loadData() {
@@ -602,7 +590,7 @@ function renderRsvp(r, maxPeople, guestName) {
       <h3>${esc(r.title || 'RSVP')}</h3>
       <div class="invite-info">
         ${r.label ? `<h4>${esc(r.label)}</h4>` : ''}
-        ${r.deadline ? `<p style="margin-bottom:10px;">Please reply before ${esc(r.deadline)}</p>` : ''}
+        ${r.deadline ? `<p style="margin-bottom:10px;">Please reply before ${esc(fmtDate(r.deadline))}</p>` : ''}
         ${guestName ? `<p class="invite-names">${esc(guestName)}</p>
         <p class="invite-max">Number of invitees: ${maxPeople}</p>` : ''}
       </div>
@@ -616,7 +604,9 @@ function renderRsvp(r, maxPeople, guestName) {
         ${r.allowWishes !== false ? `<textarea data-wishes rows="3" maxlength="200" placeholder="Share your love and wishes..."></textarea>` : ''}
         <button type="submit" class="btn-submit">${esc(r.buttonText || 'Send Response')}</button>
       </form>
-      <div class="success-msg" data-rsvp-success>Thank you! We can't wait to celebrate with you.</div>
+      <div class="success-msg" data-rsvp-success
+           data-accept="${esc(r.acceptMessage || "Thank you! We can't wait to celebrate with you.")}"
+           data-decline="${esc(r.declineMessage || 'Thank you for letting us know. You will be missed.')}">Thank you! We can't wait to celebrate with you.</div>
     </div>
   </section>`;
 }
@@ -640,40 +630,12 @@ function build(data) {
   document.getElementById('main').innerHTML = parts.join('');
   document.title = (data.title || (data.cover && data.cover.names) || 'Invitation') + ' — Wedding Invitation';
 
-  setupMusic(data.music);
+  if (window.InvitationMusic) InvitationMusic.init(data.music, API_BASE);
 }
 
-// ── MUSIC (autoplay on first interaction, like the reference) ──
-let musicStarted = false;
-function setupMusic(m) {
-  if (!m || m.enabled === false || !m.url) return;
-  const audio = document.getElementById('bgMusic');
-  const btn = document.getElementById('musicBtn');
-  audio.src = m.url;
-  btn.style.display = 'block';
-
-  btn.addEventListener('click', e => {
-    e.stopPropagation();
-    if (audio.paused) audio.play().catch(() => {});
-    else audio.pause();
-  });
-  audio.addEventListener('play',  () => { btn.textContent = '❚❚'; musicStarted = true; });
-  audio.addEventListener('pause', () => { btn.textContent = '♪'; });
-
-  if (m.autoplay !== false) {
-    const start = () => {
-      if (musicStarted) return;
-      audio.play().then(() => {
-        window.removeEventListener('scroll', start);
-        window.removeEventListener('click', start);
-        window.removeEventListener('touchstart', start);
-      }).catch(() => { /* keep listening for the next interaction */ });
-    };
-    window.addEventListener('scroll', start, { passive: true });
-    window.addEventListener('click', start);
-    window.addEventListener('touchstart', start, { passive: true });
-  }
-}
+// ── MUSIC ──────────────────────────────────────────────
+// Handled by the shared invitation-music.js module (fixed bottom-left icon,
+// mute-only toggle, autoplay-on-interaction, uploaded audio or YouTube).
 
 // ── EVENTS ─────────────────────────────────────────────
 document.addEventListener('click', e => {
@@ -746,7 +708,9 @@ document.addEventListener('submit', async e => {
   }
 
   form.style.display = 'none';
-  form.parentElement.querySelector('[data-rsvp-success]').style.display = 'block';
+  const successEl = form.parentElement.querySelector('[data-rsvp-success]');
+  successEl.innerHTML = nl2br(attending ? successEl.dataset.accept : successEl.dataset.decline);
+  successEl.style.display = 'block';
 });
 
 // ── INIT ───────────────────────────────────────────────

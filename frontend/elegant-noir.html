@@ -277,20 +277,6 @@
   footer { padding: 3rem 1.8rem 4rem; text-align: center; font-family: 'Cormorant Garamond', serif; font-style: italic; color: var(--muted); font-size: .95rem; }
   footer .g { color: var(--gold); font-style: normal; }
 
-  /* ── MUSIC BUTTON ── */
-  #musicBtn {
-    position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 50;
-    width: 52px; height: 52px; border-radius: 50%;
-    background: rgba(201,164,92,.92); border: none; cursor: pointer;
-    display: none; align-items: center; justify-content: center;
-    box-shadow: 0 8px 26px rgba(0,0,0,.5);
-    color: #1a150e; font-size: 1.05rem;
-    transition: transform .2s;
-  }
-  #musicBtn:hover { transform: scale(1.07); }
-  #musicBtn.playing { animation: spinPulse 3.2s linear infinite; }
-  @keyframes spinPulse { 0%,100% { box-shadow: 0 8px 26px rgba(0,0,0,.5); } 50% { box-shadow: 0 8px 34px rgba(201,164,92,.35); } }
-
   /* ── PETALS ── */
   .petal {
     position: fixed; top: -20px; z-index: 5; pointer-events: none;
@@ -325,8 +311,7 @@
 
 <main id="main"></main>
 
-<button id="musicBtn" aria-label="Toggle music">▶</button>
-<audio id="musicAudio" loop preload="none"></audio>
+<script src="./invitation-music.js" defer></script>
 
 <script>
 // ── API CONFIG ─────────────────────────────────────────
@@ -468,6 +453,22 @@ const esc = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const nl2br = s => esc(s).replace(/\n/g, '<br>');
+// Resolve API-relative uploaded media (/api/public/media/<id>) against API_BASE.
+const mediaSrc = u => u && /^\/api\//.test(u) ? (API_BASE || '') + u : (u || '');
+// Format a yyyy-MM-dd deadline as a readable date; falls back to the raw string.
+function fmtDate(s) {
+  if (!s) return '';
+  const dt = new Date(/^\d{4}-\d{2}-\d{2}$/.test(s) ? s + 'T00:00:00' : s);
+  return isNaN(dt) ? s : dt.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+// Section background image with a dark scrim so text stays legible on the Noir theme.
+// Returns an inline style attribute (leading space) or '' when there is no image.
+function bgStyle(image) {
+  const u = mediaSrc(image);
+  return u
+    ? ` style="background-image:linear-gradient(rgba(15,12,9,.80),rgba(15,12,9,.88)),url('${esc(u)}');background-size:cover;background-position:center;"`
+    : '';
+}
 const pinIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>';
 
 // ── RENDERERS ──────────────────────────────────────────
@@ -487,7 +488,7 @@ function renderHero(data) {
   }
 
   return `
-  <section id="hero">
+  <section id="hero"${bgStyle(c.image)}>
     <div class="hero-ring"></div>
     ${c.eventLabel ? `<p class="label reveal">${esc(c.eventLabel)}</p>` : ''}
     <h1 class="script hero-names reveal">${namesHtml}</h1>
@@ -555,7 +556,7 @@ function renderLocations(l) {
       ${loc.url ? `<a class="btn-map" href="${esc(loc.url)}" target="_blank" rel="noopener">${pinIcon} Open in Google Maps</a>` : ''}
     </div>`).join('');
   return `
-  <section>
+  <section${bgStyle(l.image)}>
     ${l.label ? `<p class="label reveal">${esc(l.label)}</p>` : ''}
     ${l.title ? `<h2 class="script sec-title-script reveal">${esc(l.title)}</h2>` : ''}
     <div class="loc-cards">${cards}</div>
@@ -593,7 +594,7 @@ function renderGifts(g) {
       </div>
     </div>`).join('');
   return `
-  <section>
+  <section${bgStyle(g.image)}>
     ${g.label ? `<p class="label reveal">${esc(g.label)}</p>` : ''}
     ${g.title ? `<h2 class="script sec-title-script reveal">${esc(g.title)}</h2>` : ''}
     ${g.description ? `<p class="gift-desc reveal">${nl2br(g.description)}</p>` : ''}
@@ -606,9 +607,9 @@ function renderRsvp(r, maxPeople, npValue, guestName) {
   for (let i = 1; i <= maxPeople; i++) {
     opts.push(`<option value="${i}"${i === npValue ? ' selected' : ''}>${i} ${i === 1 ? 'person' : 'persons'}</option>`);
   }
-  const deadlineLine = [r.label, r.deadline].filter(Boolean).map(esc).join(' ');
+  const deadlineLine = [r.label, r.deadline ? fmtDate(r.deadline) : ''].filter(Boolean).map(esc).join(' ');
   return `
-  <section id="rsvpSection">
+  <section id="rsvpSection"${bgStyle(r.image)}>
     ${deadlineLine ? `<p class="label reveal">${deadlineLine}</p>` : ''}
     ${r.title ? `<h2 class="script sec-title-script reveal">${esc(r.title)}</h2>` : ''}
     <div class="rsvp-form" data-rsvp>
@@ -627,7 +628,9 @@ function renderRsvp(r, maxPeople, npValue, guestName) {
         <p class="char-count"><span data-wish-count>0</span>/200</p>` : ''}
       <button class="btn-send reveal" data-submit-rsvp>${esc(r.buttonText || 'Send RSVP')}</button>
     </div>
-    <div class="rsvp-done" data-rsvp-done>
+    <div class="rsvp-done" data-rsvp-done
+         data-accept="${esc(r.acceptMessage || 'Thank you for your reply!\nWe can\'t wait to celebrate with you.')}"
+         data-decline="${esc(r.declineMessage || 'Thank you for letting us know.\nYou will be missed.')}">
       Thank you for your reply!<br>
       <span style="color:var(--gold)">✦</span>
     </div>
@@ -683,7 +686,7 @@ function build(data) {
 
   setupReveal();
   startCountdown();
-  setupMusic(data.music);
+  if (window.InvitationMusic) InvitationMusic.init(data.music, API_BASE);
 }
 
 // ── SCROLL REVEAL ──────────────────────────────────────
@@ -719,21 +722,8 @@ function startCountdown() {
 }
 
 // ── MUSIC ──────────────────────────────────────────────
-let musicWanted = false;
-function setupMusic(m) {
-  if (!m || m.enabled === false || !m.url) return;
-  const audio = document.getElementById('musicAudio');
-  const btn = document.getElementById('musicBtn');
-  audio.src = m.url;
-  btn.style.display = 'flex';
-  musicWanted = m.autoplay !== false;
-  btn.addEventListener('click', () => {
-    if (audio.paused) { audio.play().catch(() => {}); }
-    else audio.pause();
-  });
-  audio.addEventListener('play',  () => { btn.textContent = '❚❚'; btn.classList.add('playing'); });
-  audio.addEventListener('pause', () => { btn.textContent = '▶';  btn.classList.remove('playing'); });
-}
+// Background music is handled by the shared invitation-music.js module
+// (fixed bottom-left icon, mute-only toggle, autoplay-on-interaction, YouTube support).
 
 // ── PETALS ─────────────────────────────────────────────
 const PETALS = ['✿', '❀', '✦'];
@@ -758,10 +748,6 @@ function openEnvelope() {
   document.getElementById('main').classList.add('visible');
   setTimeout(() => env.remove(), 1100);
 
-  // Tap is a user gesture → allowed to start audio
-  if (musicWanted) {
-    document.getElementById('musicAudio').play().catch(() => {});
-  }
   setInterval(spawnPetal, 1600);
   for (let i = 0; i < 5; i++) setTimeout(spawnPetal, i * 350);
 }
@@ -845,6 +831,8 @@ async function submitRSVP(btn) {
 
   form.style.display = 'none';
   const done = form.parentElement.querySelector('[data-rsvp-done]');
+  // Show the accept or decline message the admin configured.
+  done.innerHTML = nl2br(attending ? done.dataset.accept : done.dataset.decline);
   done.style.display = 'block';
 }
 

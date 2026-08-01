@@ -5,7 +5,7 @@ public record LoginRequest(string Email, string Password);
 public record LoginResponse(string Token, string Role, string FullName, bool MustChangePassword);
 public record ChangePasswordRequest(string? CurrentPassword, string NewPassword);
 public record ChangeEmailRequest(string CurrentPassword, string NewEmail);
-public record UpdateClientCredentialsRequest(string? NewEmail, string? NewPassword);
+public record UpdateClientCredentialsRequest(string? NewEmail, string? NewPassword, string? NewPhone = null);
 
 // ── INVITATION DATA SHAPE (matches the existing JS data model) ──
 public class InvitationData
@@ -22,6 +22,7 @@ public class InvitationData
     public FamiliesData? Families { get; set; }
     public MemoriesData? Memories { get; set; }
     public MusicData? Music { get; set; }
+    public SlideshowData? Slideshow { get; set; }
 }
 
 public class CoverData
@@ -34,6 +35,8 @@ public class CoverData
     public string? HostIntro { get; set; }
     public string? HostOutro { get; set; }
     public string? Image { get; set; }
+    /// <summary>Optional decorative background video (muted, looping). Overrides the image when set.</summary>
+    public string? Video { get; set; }
     public string? ButtonText { get; set; }
     // Elegant Noir envelope screen: "Dear {guest}" prefix + wax-seal image
     public string? Greeting { get; set; }
@@ -90,10 +93,24 @@ public class RsvpData
     public string? Label { get; set; }
     public string? Title { get; set; }
     public string? Image { get; set; }
+    /// <summary>Reservation deadline (ISO yyyy-MM-dd from the admin date picker). Empty = none.</summary>
     public string? Deadline { get; set; }
     public int MaxPeople { get; set; } = 10;
     public string? ButtonText { get; set; }
     public bool AllowWishes { get; set; } = true;
+    /// <summary>Shown after a guest accepts.</summary>
+    public string? AcceptMessage { get; set; }
+    /// <summary>Shown after a guest declines.</summary>
+    public string? DeclineMessage { get; set; }
+}
+
+public class SlideshowData
+{
+    public bool Enabled { get; set; } = true;
+    /// <summary>Seconds each image is shown before rotating. Clamped to a sane range on save.</summary>
+    public int IntervalSeconds { get; set; } = 6;
+    /// <summary>Ordered image URLs (user-uploaded media references).</summary>
+    public List<string> Images { get; set; } = [];
 }
 
 public class CustomSection
@@ -193,12 +210,13 @@ public record CreateTemplateRequest(string Name, string? Description, Invitation
 public record UpdateTemplateRequest(string Name, string? Description, bool IsActive, InvitationData Data);
 
 // ── CLIENT ACCOUNT ─────────────────────────────────────────
+// Email is optional as long as a phone is supplied (validated server-side).
 public record CreateClientRequest(
-    Guid InvitationId, string Email, string Password,
+    Guid InvitationId, string? Email, string Password,
     string FullName, string? Phone);
 
 public record ClientAccountDto(
-    Guid Id, Guid InvitationId, string Email, string FullName,
+    Guid Id, Guid InvitationId, string? Email, string FullName,
     string? Phone, bool IsActive, bool MustChangePassword,
     DateTime? LastLoginAt, DateTime CreatedAt);
 

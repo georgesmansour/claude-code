@@ -112,6 +112,23 @@ internal static class TestSupport
         return ctrl;
     }
 
+    /// <summary>AdminController authenticated as a Super Admin.</summary>
+    public static AdminController NewAdminController(AppDbContext db, Guid adminId)
+    {
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, adminId.ToString()),
+            new Claim(ClaimTypes.Role, "SuperAdmin")
+        }, "TestAuth");
+        return new AdminController(db)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+            }
+        };
+    }
+
     /// <summary>ClientController authenticated as the owner of <paramref name="invitationId"/>.</summary>
     public static ClientController NewClientController(AppDbContext db, Guid invitationId)
     {

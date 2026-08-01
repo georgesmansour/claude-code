@@ -57,6 +57,7 @@ public static class InvitationDataMapper
                 case SectionType.Families: data.Families = Deserialize<FamiliesData>(s.Config); SetEnabled(data.Families, s.Enabled); break;
                 case SectionType.Memories: data.Memories = Deserialize<MemoriesData>(s.Config); SetEnabled(data.Memories, s.Enabled); break;
                 case SectionType.Music:    data.Music    = Deserialize<MusicData>(s.Config);    SetEnabled(data.Music,    s.Enabled); break;
+                case SectionType.Slideshow:data.Slideshow= Deserialize<SlideshowData>(s.Config); SetEnabled(data.Slideshow, s.Enabled); break;
             }
         }
         return data;
@@ -108,6 +109,11 @@ public static class InvitationDataMapper
         foreach (var c in data.CustomSections ?? [])
             inv.Sections.Add(BuildSection(SectionType.Custom, c, c.Enabled, order++));
 
+        if (data.Slideshow is not null)
+        {
+            data.Slideshow.IntervalSeconds = Math.Clamp(data.Slideshow.IntervalSeconds, 2, 60);
+            inv.Sections.Add(BuildSection(SectionType.Slideshow, data.Slideshow, data.Slideshow.Enabled, order++));
+        }
         if (data.Gallery  is not null) inv.Sections.Add(BuildSection(SectionType.Gallery,  data.Gallery,  data.Gallery.Enabled,  order++));
         if (data.Timeline is not null) inv.Sections.Add(BuildSection(SectionType.Timeline, data.Timeline, data.Timeline.Enabled, order++));
         if (data.Families is not null) inv.Sections.Add(BuildSection(SectionType.Families, data.Families, data.Families.Enabled, order++));

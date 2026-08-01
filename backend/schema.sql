@@ -501,7 +501,16 @@ COMMIT;
 
 START TRANSACTION;
 
--- Super Admin flag (20260723204500_AddSuperAdminFlag) is reflected inline in admin_accounts above.
+-- Super Admin flag: the is_super_admin column is created inline in admin_accounts above, so here we
+-- only RECORD the migration as applied — otherwise EF's MigrateAsync would try to ADD the column
+-- again on the next boot and fail ("column already exists").
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260723204500_AddSuperAdminFlag') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260723204500_AddSuperAdminFlag', '10.0.0');
+    END IF;
+END $EF$;
 
 -- User-uploaded media (editable, per-invitation). Kept strictly separate from built-in
 -- template assets, which live in the templates' JSON as application-owned URLs and are
@@ -528,6 +537,30 @@ BEGIN
     CREATE UNIQUE INDEX "IX_user_media_invitation_id_content_hash" ON user_media (invitation_id, content_hash);
     INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
     VALUES ('20260725151200_AddUserMedia', '10.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+-- Client contact: email becomes optional (phone-only clients allowed) but a check constraint
+-- guarantees at least one contact method; phone gains a unique index for login-by-phone.
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260728194558_ClientContactEmailOrPhone') THEN
+    ALTER TABLE client_accounts ALTER COLUMN email DROP NOT NULL;
+    -- Normalise phones to canonical form, drop blanks, and de-duplicate (keep newest) so the unique index can build.
+    UPDATE client_accounts SET phone = NULL WHERE phone IS NOT NULL AND btrim(phone) = '';
+    UPDATE client_accounts SET phone = (CASE WHEN btrim(phone) LIKE '+%' THEN '+' ELSE '' END) || regexp_replace(phone, '\D', '', 'g') WHERE phone IS NOT NULL;
+    UPDATE client_accounts SET phone = NULL WHERE phone IN ('', '+');
+    UPDATE client_accounts c SET phone = NULL
+      WHERE c.phone IS NOT NULL AND EXISTS (
+        SELECT 1 FROM client_accounts o
+        WHERE o.phone = c.phone AND o.id <> c.id AND (o.updated_at, o.id) > (c.updated_at, c.id));
+    CREATE UNIQUE INDEX "IX_client_accounts_phone" ON client_accounts (phone);
+    ALTER TABLE client_accounts ADD CONSTRAINT "CK_client_accounts_contact" CHECK (email IS NOT NULL OR phone IS NOT NULL);
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260728194558_ClientContactEmailOrPhone', '10.0.0');
     END IF;
 END $EF$;
 COMMIT;

@@ -8,7 +8,11 @@ public class ClientAccount
     public Guid InvitationId { get; set; }
     public Guid CreatedBy { get; set; }
 
-    public string Email { get; set; } = string.Empty;
+    /// <summary>
+    /// Contact email. Nullable because a client may register with a phone number instead — but a
+    /// DB check constraint guarantees at least one of <see cref="Email"/>/<see cref="Phone"/> is set.
+    /// </summary>
+    public string? Email { get; set; }
     public string PasswordHash { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string? Phone { get; set; }
