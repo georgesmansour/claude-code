@@ -9,3 +9,10 @@
   to     = "https://YOUR-BACKEND-URL/api/:splat"
   status = 200
   force  = true
+
+# ── Personal guest links ─────────────────────────────────────────────────────
+# /invite/<name-slug> is resolved client-side by the dispatcher.
+[[redirects]]
+  from   = "/invite/*"
+  to     = "/invitation.html"
+  status = 200

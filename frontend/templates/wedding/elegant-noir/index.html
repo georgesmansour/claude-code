@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wedding Invitation</title>
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
-<script src="./config.js"></script>
+<script src="../../../shared/config.js"></script>
+<script src="../../../shared/demo-data.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -105,6 +106,17 @@
   }
   .hero-venue { font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; color: var(--muted); margin-top: .6rem; letter-spacing: .04em; }
 
+  /* Hosts' message + families, shown above the couple's names in the hero. */
+  .hero-host {
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 1.05rem; color: var(--muted); margin: .5rem auto 0;
+    max-width: 34ch; line-height: 1.6;
+  }
+  .hero-families { margin: 1.1rem auto .4rem; display: flex; flex-direction: column; gap: .5rem; }
+  .hero-fam-label { font-size: .62rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); }
+  .hero-fam-names { font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; color: var(--ivory); margin-top: .15rem; }
+  .hero-fam-and { display: block; font-family: 'Great Vibes', cursive; font-size: 1.3rem; color: var(--gold); }
+
   .countdown { display: flex; gap: .7rem; justify-content: center; margin-top: 2.4rem; }
   .cd-box {
     width: 66px; padding: .9rem 0 .7rem;
@@ -176,6 +188,12 @@
     text-decoration: none; transition: background .25s;
   }
   .btn-map:hover { background: rgba(201,164,92,.2); }
+  /* Compact variant for the timeline steps — the full-size button is too bulky on a phone. */
+  .btn-map-sm {
+    margin-top: .5rem; padding: .28rem .7rem; gap: 5px;
+    font-size: .66rem; letter-spacing: .06em;
+  }
+  .btn-map-sm svg { width: 11px; height: 11px; }
 
   /* ── TIMELINE ── */
   .timeline { margin-top: 2.6rem; text-align: left; position: relative; padding-left: 0; }
@@ -311,7 +329,8 @@
 
 <main id="main"></main>
 
-<script src="./invitation-music.js" defer></script>
+<script src="../../../shared/demo-data.js"></script>
+<script src="../../../shared/invitation-music.js" defer></script>
 
 <script>
 // ── API CONFIG ─────────────────────────────────────────
@@ -383,6 +402,12 @@ function parseQuery() {
 
 async function loadData() {
   const params = parseQuery();
+
+  // ?demo=<key> renders the built-in sample invitation (sales/preview mode, no API call).
+  if (window.getDemoData) {
+    const demo = window.getDemoData(window.location.search);
+    if (demo) return mergeDefaults(demo);
+  }
 
   const enc = params.get('d');
   if (enc) {
@@ -487,10 +512,32 @@ function renderHero(data) {
       : dt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
   }
 
+  // Families and the hosts' invitation message belong ABOVE the couple's names, matching the
+  // other wedding templates ("<parents> ... invite you to celebrate ... <names>").
+  const fams = (data.families && data.families.enabled !== false ? (data.families.items || []) : [])
+    .filter(f => f && (f.label || f.names));
+  const famHtml = fams.length ? `
+    <div class="hero-families reveal">
+      ${fams.map((f, i) => `
+        ${i > 0 ? '<span class="hero-fam-and">and</span>' : ''}
+        <div class="hero-fam">
+          ${f.label ? `<p class="hero-fam-label">${esc(f.label)}</p>` : ''}
+          ${f.names ? `<p class="hero-fam-names">${esc(f.names)}</p>` : ''}
+        </div>`).join('')}
+    </div>` : '';
+  // The hosts' message: hostIntro above the families, hostText/hostOutro just before the names.
+  // These were never rendered before, which is why the invitation message could go missing.
+  const introLine = c.hostIntro ? `<p class="hero-host reveal">${nl2br(c.hostIntro)}</p>` : '';
+  const outroLine = [c.hostText, c.hostOutro].filter(Boolean)
+    .map(s => `<p class="hero-host reveal">${nl2br(s)}</p>`).join('');
+
   return `
   <section id="hero"${bgStyle(c.image)}>
     <div class="hero-ring"></div>
     ${c.eventLabel ? `<p class="label reveal">${esc(c.eventLabel)}</p>` : ''}
+    ${introLine}
+    ${famHtml}
+    ${outroLine}
     <h1 class="script hero-names reveal">${namesHtml}</h1>
     ${c.tagline ? `<p class="serif reveal" style="font-style:italic;font-size:1.15rem;color:var(--muted);margin-top:1rem;">${esc(c.tagline)}</p>` : ''}
     ${dateStr ? `<p class="hero-date reveal">${esc(dateStr)}</p>` : ''}
@@ -517,24 +564,14 @@ function renderCustom(c) {
   </section>`;
 }
 
-function renderFamilies(f) {
-  const cards = (f.items || []).map(x => `
-    <div class="family-card reveal">
-      ${x.label ? `<p class="family-label">${esc(x.label)}</p>` : ''}
-      <p class="family-names">${esc(x.names || '')}</p>
-    </div>`).join('');
-  return `
-  <section>
-    <span class="spark reveal">✦</span>
-    <div class="family-cards">${cards}</div>
-    ${f.label ? `<p class="family-outro reveal">${esc(f.label)}</p>` : ''}
-  </section>`;
-}
+// NOTE: the families are rendered inside the hero (above the couple's names) by renderHero,
+// so there is no separate families section any more.
 
 function renderGallery(g) {
-  const shots = (g.items || []).map(img => `
+  // Skip entries whose image was removed — rendering src="" shows a broken-image placeholder.
+  const shots = (g.items || []).filter(img => img && img.url).map(img => `
     <div class="polaroid reveal">
-      <img src="${esc(img.url)}" alt="${esc(img.caption || 'Photo')}" loading="lazy">
+      <img src="${esc(mediaSrc(img.url))}" alt="${esc(img.caption || 'Photo')}" loading="lazy">
       ${img.caption ? `<p class="cap">${esc(img.caption)}</p>` : '<p class="cap">&nbsp;</p>'}
     </div>`).join('');
   return `
@@ -571,6 +608,7 @@ function renderTimeline(t) {
       <div>
         <p class="tl-title">${esc(x.title || '')}</p>
         ${x.subtitle ? `<p class="tl-sub">${esc(x.subtitle)}</p>` : ''}
+        ${x.url ? `<a class="btn-map btn-map-sm" href="${esc(x.url)}" target="_blank" rel="noopener">${pinIcon} Location</a>` : ''}
       </div>
     </div>`).join('');
   return `
@@ -672,8 +710,7 @@ function build(data) {
   const parts = [];
   parts.push(renderHero(data));
   (data.customSections || []).forEach(s => { if (s.enabled !== false) parts.push(renderCustom(s)); });
-  if (data.families  && data.families.enabled  !== false && (data.families.items || []).length)  parts.push(renderFamilies(data.families));
-  if (data.gallery   && data.gallery.enabled   !== false && (data.gallery.items  || []).length)  parts.push(renderGallery(data.gallery));
+  if (data.gallery   && data.gallery.enabled   !== false && (data.gallery.items  || []).some(x => x && x.url)) parts.push(renderGallery(data.gallery));
   if (data.locations && data.locations.enabled !== false && (data.locations.items || []).length) parts.push(renderLocations(data.locations));
   if (data.timeline  && data.timeline.enabled  !== false && (data.timeline.items || []).length)  parts.push(renderTimeline(data.timeline));
   if (data.gifts     && data.gifts.enabled     !== false && (data.gifts.items    || []).length)  parts.push(renderGifts(data.gifts));

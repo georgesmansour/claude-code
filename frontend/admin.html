@@ -6,7 +6,7 @@
 <title>Invitation Admin</title>
 <meta name="robots" content="noindex, nofollow">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="./config.js"></script>
+<script src="./shared/config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -70,6 +70,8 @@
   .badge-draft { background: rgba(255,255,255,.05); color: var(--muted); border: 1px solid rgba(255,255,255,.1); }
   .badge-published { background: rgba(110,214,138,.1); color: var(--success); border: 1px solid rgba(110,214,138,.3); }
   .badge-archived { background: rgba(217,102,102,.1); color: var(--danger); border: 1px solid rgba(217,102,102,.3); }
+  .badge-template { font-size: .55rem; padding: 1px 6px; border-radius: 2px; letter-spacing: 1px; background: rgba(201,169,110,.12); color: var(--gold-light); border: 1px solid var(--border); }
+  .badge-template.unassigned { background: rgba(255,255,255,.04); color: var(--muted); }
   .empty-state { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: .8rem; }
 
   /* EDITOR */
@@ -154,6 +156,14 @@
   .btn-icon { padding: .35rem .55rem; font-size: .9rem; min-width: 32px; background: rgba(255,255,255,.04); }
 
   .footer-actions { position: sticky; bottom: 0; margin-top: 1.5rem; padding: 1rem 0; background: linear-gradient(to top, var(--bg) 70%, rgba(14,12,11,0)); display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Event-type filter chips above the template grid */
+  .event-filter { display: flex; flex-wrap: wrap; gap: 8px; padding: 1.5rem 1.5rem 0; }
+  .chip { padding: .45rem .9rem; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--muted); font-family: inherit; font-size: .72rem; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all .2s; }
+  .chip:hover { border-color: var(--border-strong); color: var(--text); }
+  .chip.active { background: rgba(201,169,110,.12); border-color: var(--gold); color: var(--gold-light); }
+  .chip span { opacity: .6; margin-left: 4px; }
+  .badge-event { background: rgba(201,169,110,.16); color: var(--gold-light); }
 
   .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; padding: 1.5rem; }
   .template-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; }
@@ -257,6 +267,7 @@
 
   <!-- TEMPLATES TAB -->
   <div id="tab-templates" class="hidden">
+    <div class="event-filter" id="eventFilter"></div>
     <div class="template-grid" id="templateGrid"></div>
   </div>
 
@@ -280,6 +291,22 @@
   <!-- SETTINGS TAB -->
   <div id="tab-settings" class="hidden">
     <div class="panel">
+      <div class="block">
+        <h2>Landing Page Contact Details</h2>
+        <p style="font-size:.8rem; color:var(--muted); margin-bottom:1rem;">Shown in the Contact section of the public landing page. Leave a field blank to hide it there.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="field"><label>Company email</label><input id="ls-email" type="email" placeholder="hello@yourcompany.com"></div>
+          <div class="field"><label>Phone number</label><input id="ls-phone" type="tel" placeholder="+961 70 000 000"></div>
+          <div class="field"><label>WhatsApp number</label><input id="ls-whatsapp" type="tel" placeholder="+961 70 000 000"></div>
+          <div class="field"><label>Company address</label><input id="ls-address" placeholder="Beirut, Lebanon"></div>
+          <div class="field"><label>Instagram URL</label><input id="ls-instagram" type="url" placeholder="https://instagram.com/…"></div>
+          <div class="field"><label>Facebook URL</label><input id="ls-facebook" type="url" placeholder="https://facebook.com/…"></div>
+          <div class="field"><label>TikTok URL</label><input id="ls-tiktok" type="url" placeholder="https://tiktok.com/@…"></div>
+          <div class="field"><label>Pinterest URL</label><input id="ls-pinterest" type="url" placeholder="https://pinterest.com/…"></div>
+          <div class="field full"><label>Google Maps embed URL <span style="opacity:.5">(optional)</span></label><input id="ls-map" type="url" placeholder="https://www.google.com/maps/embed?pb=…"></div>
+          <div class="field full"><button class="btn btn-primary" onclick="saveLandingSettings()">Save Contact Details</button></div>
+        </div>
+      </div>
       <div class="block">
         <h2>Change Password</h2>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
@@ -356,7 +383,9 @@ function copy(text) {
 }
 
 function publicBase() {
-  return location.origin + '/index';
+  // The dispatcher resolves the invitation and forwards to its template folder.
+  // (Legacy "/index?id=..." links still work — index.html forwards them here.)
+  return location.origin + '/invitation';
 }
 
 // base64url-encode the invitation data for a live ?d= preview (matches the templates' decodeData).
@@ -516,6 +545,38 @@ function switchTab(tab) {
     document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab));
   if (tab === 'templates') renderTemplates();
   if (tab === 'rsvps') populateRsvpSelect();
+  if (tab === 'settings') loadLandingSettings();
+}
+
+// ════════════════════════════════════════════════════════
+// LANDING PAGE CONTACT DETAILS
+// ════════════════════════════════════════════════════════
+// Field id ↔ DTO property. Keeping one map means adding a field only needs one entry here.
+const LANDING_FIELDS = {
+  'ls-email': 'companyEmail', 'ls-phone': 'phoneNumber', 'ls-whatsapp': 'whatsAppNumber',
+  'ls-address': 'companyAddress', 'ls-instagram': 'instagramUrl', 'ls-facebook': 'facebookUrl',
+  'ls-tiktok': 'tikTokUrl', 'ls-pinterest': 'pinterestUrl', 'ls-map': 'mapEmbedUrl'
+};
+
+async function loadLandingSettings() {
+  try {
+    const s = await api('GET', '/api/admin/landing-settings') || {};
+    for (const [id, key] of Object.entries(LANDING_FIELDS)) {
+      const el = document.getElementById(id);
+      if (el) el.value = s[key] || '';
+    }
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function saveLandingSettings() {
+  const body = {};
+  for (const [id, key] of Object.entries(LANDING_FIELDS)) {
+    body[key] = document.getElementById(id)?.value.trim() || null;
+  }
+  try {
+    await api('PUT', '/api/admin/landing-settings', body);
+    toast('Contact details saved', 'success');
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 // ════════════════════════════════════════════════════════
@@ -544,6 +605,10 @@ function renderInvitationList() {
         <span class="badge-status badge-${p.status.toLowerCase()}">${esc(p.status)}</span>
         <span>?id=${esc(p.slug)}</span>
         <span>· ${p.rsvpCount} rsvp${p.rsvpCount === 1 ? '' : 's'}</span>
+      </div>
+      <div class="person-meta">
+        <span class="badge-template${p.templateName ? '' : ' unassigned'}" title="Template used by this invitation">${esc(p.templateName || 'Not Assigned')}</span>
+        ${p.templateEventType ? `<span>· ${esc(p.templateEventType)}</span>` : ''}
       </div>
     </div>`).join('');
 }
@@ -656,8 +721,8 @@ function renderEditor() {
       { key: 'hostIntro', label: 'Host intro line' },
       { key: 'hostOutro', label: 'Host outro line' },
       { key: 'hostText', label: 'Hosting families', full: true },
-      { key: 'greeting', label: 'Greeting prefix (Elegant Noir, e.g. "Dear")' },
-      { key: 'sealImage', label: 'Wax-seal image (Elegant Noir)', image: true },
+      { key: 'greeting', label: 'Greeting prefix (e.g. "Dear")', only: ['elegant-noir'] },
+      { key: 'sealImage', label: 'Wax-seal image', image: true, only: ['elegant-noir'] },
       { key: 'image', label: 'Cover image', full: true, image: true },
       { key: 'video', label: 'Cover background video (optional — muted, looping; overrides the image)', full: true, video: true }
     ])}
@@ -668,8 +733,6 @@ function renderEditor() {
       { key: 'image', label: 'Background image', full: true, image: true }
     ], 'The countdown uses the <strong>Event date</strong> set above — you only enter it once.')}
 
-    ${d.slideshow ? renderSlideshow(d.slideshow) : ''}
-
     ${renderFamilies(d.families)}
     ${renderGallery(d.gallery)}
     ${renderLocations(d.locations)}
@@ -677,14 +740,14 @@ function renderEditor() {
     ${renderGifts(d.gifts)}
     ${renderCustomSections(d.customSections || [])}
     ${renderRsvp(d.rsvp)}
-    ${renderSection('memories', 'Share Memories (Elegant Noir)', d.memories || { enabled: false }, [
+    ${renderSection('memories', 'Share Memories', d.memories || { enabled: false }, [
       { key: 'title', label: 'Title' },
       { key: 'buttonText', label: 'Button text' },
       { key: 'url', label: 'Shared album / upload link', full: true },
       { key: 'description', label: 'Description', full: true, type: 'textarea' }
     ])}
-    ${renderSection('music', 'Background Music (Elegant Noir)', d.music || { enabled: false }, [
-      { key: 'url', label: 'Audio file URL (mp3)', full: true }
+    ${renderSection('music', 'Background Music', d.music || { enabled: false }, [
+      { key: 'url', label: 'Audio file URL (mp3) or YouTube link', full: true }
     ])}
 
     <div class="footer-actions">
@@ -869,10 +932,26 @@ async function uploadMedia(field, file) {
   }
 }
 
+// Template key of the invitation being edited (e.g. "elegant-noir"), derived from its template
+// name the same way the public dispatcher does. Used to hide settings that belong to a template
+// the admin is not currently editing.
+function currentTemplateKey() {
+  if (!currentInv || !currentInv.templateId) return '';
+  const t = templates.find(x => x.id === currentInv.templateId);
+  return t ? t.name.toLowerCase().replace(/\s+/g, '-') : '';
+}
+
+// A field/section may declare `only: ['elegant-noir']` to restrict it to specific templates.
+function appliesToCurrentTemplate(f) {
+  if (!f || !f.only) return true;
+  const key = currentTemplateKey();
+  return key ? f.only.includes(key) : true;   // unknown template → show everything (safe default)
+}
+
 function renderSection(key, title, obj, fields, note) {
   if (!obj) obj = { enabled: true };
   const noteHtml = note ? `<p class="field-help" style="grid-column:1/-1;">${note}</p>` : '';
-  const fieldHtml = noteHtml + fields.map(f => fieldHtmlFor(f, obj, key)).join('');
+  const fieldHtml = noteHtml + fields.filter(appliesToCurrentTemplate).map(f => fieldHtmlFor(f, obj, key)).join('');
   return `
     <div class="section ${obj.enabled === false ? 'disabled' : ''}" id="sec-${key}">
       <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
@@ -1038,61 +1117,13 @@ function renderCustomSections(arr) {
     <button class="add-btn" style="margin-bottom:1rem;" onclick="addCustomSection()">+ Add custom page</button>`;
 }
 
-// ── SLIDESHOW EDITOR (multiple reorderable images + interval) ──
-function renderSlideshow(s) {
-  if (!s) s = { enabled: true, intervalSeconds: 6, images: [] };
-  s.images = s.images || [];
-  const rows = s.images.map((url, i) => `
-    <div class="item-card" data-slide-row="${i}" style="display:flex; gap:10px; align-items:flex-start;">
-      <div style="flex:1; min-width:0;">${mediaField(`<input type="hidden" data-slideshow-index="${i}" data-media-holder value="${esc(url)}">`, url)}</div>
-      <div style="display:flex; flex-direction:column; gap:4px;">
-        <button class="btn-icon" onclick="moveSlide(${i},-1)" title="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
-        <button class="btn-icon" onclick="moveSlide(${i},1)" title="Move down" ${i === s.images.length - 1 ? 'disabled' : ''}>↓</button>
-        <button class="btn-icon btn-danger" onclick="removeSlide(${i})" title="Remove image">✕</button>
-      </div>
-    </div>`).join('');
-  return `
-    <div class="section ${s.enabled === false ? 'disabled' : ''}" id="sec-slideshow">
-      <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
-        <h2>Slideshow</h2>
-        <div class="section-controls">
-          <label class="toggle" onclick="event.stopPropagation()"><input type="checkbox" ${s.enabled !== false ? 'checked' : ''} onchange="toggleSection('slideshow', this.checked)"><span class="toggle-slider"></span></label>
-          <span class="chev">▾</span>
-        </div>
-      </div>
-      <div class="section-body" style="grid-template-columns:1fr;">
-        <p class="field-help">Upload multiple images and use the arrows to reorder them. They rotate automatically on the invitation.</p>
-        <div class="field" style="max-width:220px;">
-          <label>Rotation interval (seconds)</label>
-          <input type="number" min="2" max="60" value="${esc(s.intervalSeconds || 6)}"
-                 oninput="currentInv.data.slideshow.intervalSeconds = Math.max(2, Math.min(60, parseInt(this.value) || 6)); dirty = true;">
-        </div>
-        <div class="slide-list" style="display:flex; flex-direction:column; gap:10px;">${rows}</div>
-        <button class="add-btn" onclick="addSlide()">+ Add image</button>
-      </div>
-    </div>`;
-}
-
-function reRenderSlideshow() {
-  const el = document.getElementById('sec-slideshow');
-  if (el && currentInv.data.slideshow) el.outerHTML = renderSlideshow(currentInv.data.slideshow);
-}
-function addSlide()        { const s = currentInv.data.slideshow; s.images = s.images || []; s.images.push(''); dirty = true; reRenderSlideshow(); }
-function removeSlide(i)    { const s = currentInv.data.slideshow; s.images.splice(i, 1); dirty = true; reRenderSlideshow(); }
-function moveSlide(i, dir) {
-  const s = currentInv.data.slideshow; const j = i + dir;
-  if (j < 0 || j >= s.images.length) return;
-  [s.images[i], s.images[j]] = [s.images[j], s.images[i]];
-  dirty = true; reRenderSlideshow();
-}
-
 function renderRsvp(R) {
   if (!R) R = { enabled: true };
   return renderSection('rsvp', 'RSVP', R, [
     { key: 'label', label: 'Section label' },
     { key: 'title', label: 'Section title' },
     { key: 'deadline', label: 'Reservation deadline', type: 'date' },
-    { key: 'buttonText', label: 'Submit button text (Elegant Noir)' },
+    { key: 'buttonText', label: 'Submit button text' },
     { key: 'acceptMessage', label: 'Message shown when a guest ACCEPTS', full: true, type: 'textarea' },
     { key: 'declineMessage', label: 'Message shown when a guest DECLINES', full: true, type: 'textarea' },
     { key: 'image', label: 'Background image', full: true, image: true }
@@ -1119,7 +1150,7 @@ function renderFamilies(F) {
   return `
     <div class="section ${F.enabled === false ? 'disabled' : ''}" id="sec-families">
       <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
-        <h2>Families <span class="pill" style="margin-left:8px;">Elegant Noir</span></h2>
+        <h2>Families</h2>
         <div class="section-controls">
           <label class="toggle" onclick="event.stopPropagation()">
             <input type="checkbox" ${F.enabled !== false ? 'checked' : ''} onchange="toggleSection('families', this.checked)">
@@ -1156,7 +1187,7 @@ function renderGallery(G) {
   return `
     <div class="section ${G.enabled === false ? 'disabled' : ''}" id="sec-gallery">
       <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
-        <h2>Photo Gallery <span class="pill" style="margin-left:8px;">Elegant Noir</span></h2>
+        <h2>Photo Gallery</h2>
         <div class="section-controls">
           <label class="toggle" onclick="event.stopPropagation()">
             <input type="checkbox" ${G.enabled !== false ? 'checked' : ''} onchange="toggleSection('gallery', this.checked)">
@@ -1191,12 +1222,13 @@ function renderTimeline(T) {
         <div class="field"><label>Icon (emoji)</label><input data-item="timeline.${i}.icon" value="${esc(x.icon)}"></div>
         <div class="field"><label>Title</label><input data-item="timeline.${i}.title" value="${esc(x.title)}"></div>
         <div class="field"><label>Subtitle / venue</label><input data-item="timeline.${i}.subtitle" value="${esc(x.subtitle)}"></div>
+        <div class="field full"><label>Location URL <span style="opacity:.5">(optional — shows a Location button)</span></label><input data-item="timeline.${i}.url" value="${esc(x.url)}" placeholder="https://maps.google.com/..."></div>
       </div>
     </div>`).join('');
   return `
     <div class="section ${T.enabled === false ? 'disabled' : ''}" id="sec-timeline">
       <div class="section-header" onclick="if(!event.target.closest('.section-controls')) this.parentElement.classList.toggle('collapsed')">
-        <h2>Wedding Timeline <span class="pill" style="margin-left:8px;">Elegant Noir</span></h2>
+        <h2>Wedding Timeline</h2>
         <div class="section-controls">
           <label class="toggle" onclick="event.stopPropagation()">
             <input type="checkbox" ${T.enabled !== false ? 'checked' : ''} onchange="toggleSection('timeline', this.checked)">
@@ -1209,18 +1241,10 @@ function renderTimeline(T) {
         <div class="field"><label>Section label</label><input data-section-bind="timeline.label" value="${esc(T.label)}"></div>
         <div class="field"><label>Section title</label><input data-section-bind="timeline.title" value="${esc(T.title)}"></div>
         <div class="item-list">${items}</div>
-        <button class="add-btn" onclick="addItem('timeline', { time:'', icon:'✦', title:'', subtitle:'' })">+ Add step</button>
+        <button class="add-btn" onclick="addItem('timeline', { time:'', icon:'✦', title:'', subtitle:'', url:'' })">+ Add step</button>
       </div>
     </div>`;
 }
-
-// slideshow image handler — the media widget fires 'input' on its hidden holder
-document.addEventListener('input', e => {
-  const t = e.target;
-  if (t.dataset.slideshowIndex === undefined || !currentInv || !currentInv.data.slideshow) return;
-  currentInv.data.slideshow.images[parseInt(t.dataset.slideshowIndex)] = t.value;
-  dirty = true;
-});
 
 // dynamic items handler
 document.addEventListener('input', e => {
@@ -1511,13 +1535,41 @@ async function refreshTemplates() {
   catch (e) { toast(e.message, 'error'); }
 }
 
+// Event categories offered in the filter. Any category present on a template is picked up
+// automatically, so adding a new event type server-side needs no change here.
+const EVENT_TYPES = ['Wedding', 'Engagement', 'Birthday', 'Baby Shower', 'Graduation', 'Corporate'];
+let templateFilter = 'all';
+
+function eventTypeOf(t) { return t.eventType || 'Wedding'; }
+
+function setTemplateFilter(type) {
+  templateFilter = type;
+  renderTemplates();
+}
+
+function renderEventFilter() {
+  const c = document.getElementById('eventFilter');
+  if (!c) return;
+  // Union of the known list and whatever the API actually returned, so custom categories show up.
+  const present = new Set(templates.map(eventTypeOf));
+  const types = [...new Set([...EVENT_TYPES.filter(t => present.has(t)), ...present])];
+  const count = t => templates.filter(x => eventTypeOf(x) === t).length;
+  c.innerHTML = [
+    `<button class="chip ${templateFilter === 'all' ? 'active' : ''}" onclick="setTemplateFilter('all')">All <span>${templates.length}</span></button>`,
+    ...types.map(t => `<button class="chip ${templateFilter === t ? 'active' : ''}" onclick="setTemplateFilter('${esc(t)}')">${esc(t)} <span>${count(t)}</span></button>`)
+  ].join('');
+}
+
 function renderTemplates() {
   const c = document.getElementById('templateGrid');
   if (!c) return;
-  c.innerHTML = templates.map(t => `
+  renderEventFilter();
+  const list = templates.filter(t => templateFilter === 'all' || eventTypeOf(t) === templateFilter);
+  c.innerHTML = list.map(t => `
     <div class="template-card">
       <h3>${esc(t.name)}</h3>
       <div class="badges">
+        <span class="badge badge-event">${esc(eventTypeOf(t))}</span>
         ${t.isBuiltin ? '<span class="badge">Built-in</span>' : '<span class="badge">Custom</span>'}
         <span class="badge">${countSections(t.data)} sections</span>
       </div>
@@ -1526,7 +1578,7 @@ function renderTemplates() {
         <button class="btn btn-primary" onclick="newFromTemplate('${esc(t.id)}')">Use template</button>
         ${t.isBuiltin ? '' : `<button class="btn btn-danger" onclick="deleteTemplate('${esc(t.id)}')">Delete</button>`}
       </div>
-    </div>`).join('') || '<div class="empty-state" style="grid-column:1/-1;">No templates yet.</div>';
+    </div>`).join('') || `<div class="empty-state" style="grid-column:1/-1;">${templates.length ? 'No templates for this event type.' : 'No templates yet.'}</div>`;
 }
 
 function countSections(d) {

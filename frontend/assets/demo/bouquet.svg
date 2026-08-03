@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1600" width="1200" height="1600" role="img" aria-label="Bridal bouquet">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8f3ec"/><stop offset="1" stop-color="#eee2d2"/>
+    </linearGradient>
+    <g id="lf2"><path d="M0 0c18-10 38-8 52 6-14 12-34 14-52 6z" fill="#aebfa2"/></g>
+    <g id="rose">
+      <circle r="46" fill="#eddcd8"/>
+      <path d="M0-46A46 46 0 0 1 46 0 30 30 0 0 0 0-30 30 30 0 0 1 0-46z" fill="#dfc0ba"/>
+      <circle r="26" fill="#e5cbc6"/><circle r="12" fill="#d3a9a2"/>
+    </g>
+    <g id="bud">
+      <ellipse rx="18" ry="26" fill="#f0e2de"/><ellipse rx="9" ry="18" fill="#dcbdb7"/>
+    </g>
+  </defs>
+
+  <rect width="1200" height="1600" fill="url(#bg)"/>
+
+  <!-- stems -->
+  <g stroke="#9aae8d" stroke-width="9" stroke-linecap="round" fill="none">
+    <path d="M600 900v520"/><path d="M600 940c-40 120-70 240-70 420"/><path d="M600 940c40 120 70 240 70 420"/>
+  </g>
+  <!-- ribbon -->
+  <path d="M540 1140h120l-14 150h-92z" fill="#e2cdb0"/>
+  <path d="M540 1140h120" stroke="#c9ab84" stroke-width="6"/>
+  <path d="M600 1290c-40 60-80 80-120 90 40-70 70-110 120-90z" fill="#e8d7bd"/>
+  <path d="M600 1290c40 60 80 80 120 90-40-70-70-110-120-90z" fill="#e8d7bd"/>
+
+  <!-- greenery -->
+  <g opacity=".95">
+    <g transform="translate(430,760) rotate(-140)"><use href="#lf2"/></g>
+    <g transform="translate(400,650) rotate(-160)"><use href="#lf2"/></g>
+    <g transform="translate(770,760) rotate(-40) scale(-1,1)"><use href="#lf2"/></g>
+    <g transform="translate(800,650) rotate(-20) scale(-1,1)"><use href="#lf2"/></g>
+    <g transform="translate(600,440) rotate(-90)"><use href="#lf2"/></g>
+    <g transform="translate(500,520) rotate(-120)"><use href="#lf2"/></g>
+    <g transform="translate(700,520) rotate(-60) scale(-1,1)"><use href="#lf2"/></g>
+  </g>
+
+  <!-- blooms -->
+  <g transform="translate(600,640)"><use href="#rose" transform="scale(1.6)"/></g>
+  <g transform="translate(470,700)"><use href="#rose" transform="scale(1.2)"/></g>
+  <g transform="translate(730,700)"><use href="#rose" transform="scale(1.25)"/></g>
+  <g transform="translate(540,540)"><use href="#rose" transform="scale(1)"/></g>
+  <g transform="translate(668,545)"><use href="#rose" transform="scale(1.05)"/></g>
+  <g transform="translate(600,800)"><use href="#rose" transform="scale(1.1)"/></g>
+  <g transform="translate(410,590)"><use href="#bud"/></g>
+  <g transform="translate(790,590)"><use href="#bud"/></g>
+  <g transform="translate(600,430)"><use href="#bud"/></g>
+
+  <g opacity=".5" fill="#cfa97f">
+    <circle cx="330" cy="1330" r="6"/><circle cx="880" cy="1300" r="6"/><circle cx="250" cy="1180" r="5"/>
+  </g>
+</svg>

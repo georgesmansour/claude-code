@@ -38,7 +38,8 @@ public class AdminController(AppDbContext db) : ControllerBase
             .ToListAsync();
         return Ok(rows.Select(t => new TemplateDto(
             t.Id, t.Name, t.Description, t.IsBuiltin, t.IsActive,
-            JsonSerializer.Deserialize<InvitationData>(t.Data, Json) ?? new())));
+            JsonSerializer.Deserialize<InvitationData>(t.Data, Json) ?? new(),
+            t.EventType)));
     }
 
     [HttpPost("templates")]
@@ -49,6 +50,7 @@ public class AdminController(AppDbContext db) : ControllerBase
             CreatedBy = CurrentAdminId,
             Name = req.Name,
             Description = req.Description,
+            EventType = string.IsNullOrWhiteSpace(req.EventType) ? EventTypes.Wedding : req.EventType.Trim(),
             IsBuiltin = false,
             IsActive = true,
             Data = JsonSerializer.Serialize(req.Data, Json)
@@ -67,6 +69,7 @@ public class AdminController(AppDbContext db) : ControllerBase
         t.Name = req.Name;
         t.Description = req.Description;
         t.IsActive = req.IsActive;
+        if (!string.IsNullOrWhiteSpace(req.EventType)) t.EventType = req.EventType.Trim();
         t.Data = JsonSerializer.Serialize(req.Data, Json);
         await db.SaveChangesAsync();
         return Ok();
@@ -87,13 +90,17 @@ public class AdminController(AppDbContext db) : ControllerBase
     [HttpGet("invitations")]
     public async Task<IActionResult> ListInvitations()
     {
+        // Template name/category come from the same projection (EF emits a single LEFT JOIN),
+        // so listing invitations never triggers a per-row lookup.
         var rows = await db.Invitations
             .OrderByDescending(i => i.UpdatedAt)
             .Select(i => new InvitationListItem(
                 i.Id, i.Slug, i.Title, i.Status.ToString(),
                 i.EventDate,
                 i.Rsvps.Count,
-                i.UpdatedAt))
+                i.UpdatedAt,
+                i.Template != null ? i.Template.Name : null,
+                i.Template != null ? i.Template.EventType : null))
             .ToListAsync();
         return Ok(rows);
     }
@@ -302,6 +309,29 @@ public class AdminController(AppDbContext db) : ControllerBase
             r.ContactName, r.ContactEmail, r.ContactPhone, r.Message, r.CreatedAt,
             r.Guests.OrderBy(g => g.OrderIndex).Select(g =>
                 new RsvpGuestDto(g.FullName, g.AgeGroup, g.MealPreference, g.DietaryRestrictions)).ToList())));
+    }
+
+    // ── LANDING PAGE SETTINGS ────────────────────────────────
+    [HttpGet("landing-settings")]
+    public async Task<IActionResult> GetLandingSettings(CancellationToken ct)
+    {
+        var s = await db.LandingSettings.OrderBy(x => x.UpdatedAt).FirstOrDefaultAsync(ct);
+        return Ok(LandingSettingsMapper.ToDto(s));
+    }
+
+    /// <summary>Upserts the single settings row so the landing page picks up the new values.</summary>
+    [HttpPut("landing-settings")]
+    public async Task<IActionResult> UpdateLandingSettings([FromBody] LandingSettingsDto req, CancellationToken ct)
+    {
+        var s = await db.LandingSettings.OrderBy(x => x.UpdatedAt).FirstOrDefaultAsync(ct);
+        if (s is null)
+        {
+            s = new LandingSettings();
+            db.LandingSettings.Add(s);
+        }
+        LandingSettingsMapper.Apply(s, req);
+        await db.SaveChangesAsync(ct);
+        return Ok(LandingSettingsMapper.ToDto(s));
     }
 
     private static string RandomHex(int bytes)

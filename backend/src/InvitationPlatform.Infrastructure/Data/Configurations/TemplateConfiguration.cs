@@ -14,6 +14,8 @@ public class TemplateConfiguration : IEntityTypeConfiguration<Template>
         b.Property(e => e.CreatedBy).HasColumnName("created_by");
         b.Property(e => e.Name).HasColumnName("name").HasMaxLength(256).IsRequired();
         b.Property(e => e.Description).HasColumnName("description");
+        b.Property(e => e.EventType).HasColumnName("event_type").HasMaxLength(64)
+         .HasDefaultValue(Domain.Enums.EventTypes.Wedding).IsRequired();
         b.Property(e => e.IsBuiltin).HasColumnName("is_builtin").HasDefaultValue(false);
         b.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
         b.Property(e => e.ThumbnailUrl).HasColumnName("thumbnail_url");

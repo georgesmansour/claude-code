@@ -93,6 +93,7 @@ public class DatabaseSeeder(
                 CreatedBy = adminId,
                 Name = t.Name,
                 Description = t.Description,
+                EventType = t.EventType,
                 IsBuiltin = true,
                 IsActive = true,
                 Data = t.Data

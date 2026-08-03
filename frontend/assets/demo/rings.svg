@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1400" width="1400" height="1400" role="img" aria-label="Wedding rings with laurel">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4ece1"/><stop offset="1" stop-color="#e9dccb"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e6cd9d"/><stop offset=".5" stop-color="#c2a068"/><stop offset="1" stop-color="#a4834c"/>
+    </linearGradient>
+    <g id="lf"><path d="M0 0c16-9 34-7 46 5-12 11-30 13-46 5z" fill="#b3c3a6"/></g>
+  </defs>
+
+  <rect width="1400" height="1400" fill="url(#bg)"/>
+
+  <!-- laurel wreath -->
+  <g opacity=".8">
+    <g transform="translate(700,700)">
+      <g id="branch">
+        <path d="M0-430A430 430 0 0 0-430 0" fill="none" stroke="#a9bb9c" stroke-width="4"/>
+      </g>
+      <use href="#branch"/>
+      <use href="#branch" transform="scale(-1,1)"/>
+      <use href="#branch" transform="scale(1,-1)"/>
+      <use href="#branch" transform="scale(-1,-1)"/>
+    </g>
+    <g transform="translate(700,700)">
+      <g transform="translate(0,-430) rotate(20)"><use href="#lf"/></g>
+      <g transform="translate(-150,-404) rotate(45)"><use href="#lf"/></g>
+      <g transform="translate(-290,-318) rotate(70)"><use href="#lf"/></g>
+      <g transform="translate(-384,-192) rotate(100)"><use href="#lf"/></g>
+      <g transform="translate(-428,-40) rotate(125)"><use href="#lf"/></g>
+      <g transform="translate(150,-404) rotate(160) scale(-1,1)"><use href="#lf"/></g>
+      <g transform="translate(290,-318) rotate(-70) scale(-1,1)"><use href="#lf"/></g>
+      <g transform="translate(384,-192) rotate(-100) scale(-1,1)"><use href="#lf"/></g>
+      <g transform="translate(428,-40) rotate(-125) scale(-1,1)"><use href="#lf"/></g>
+      <g transform="translate(0,430) rotate(200)"><use href="#lf"/></g>
+      <g transform="translate(-260,346) rotate(240)"><use href="#lf"/></g>
+      <g transform="translate(260,346) rotate(-60) scale(-1,1)"><use href="#lf"/></g>
+    </g>
+  </g>
+
+  <!-- interlocking bands -->
+  <g fill="none" stroke="url(#metal)" stroke-width="26">
+    <circle cx="612" cy="712" r="150"/>
+    <circle cx="792" cy="712" r="150"/>
+  </g>
+  <!-- solitaire -->
+  <g transform="translate(792,548)">
+    <path d="M0-46 34-14 0 40-34-14z" fill="#f0e6d6" stroke="#c2a068" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M-34-14H34M0-46v86" stroke="#d9c3a0" stroke-width="3"/>
+  </g>
+  <g opacity=".55" fill="#c2a068">
+    <circle cx="480" cy="1080" r="6"/><circle cx="700" cy="1130" r="7"/><circle cx="920" cy="1076" r="6"/>
+  </g>
+</svg>

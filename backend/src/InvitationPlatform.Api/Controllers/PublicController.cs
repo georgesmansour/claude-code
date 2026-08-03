@@ -16,6 +16,17 @@ namespace InvitationPlatform.Api.Controllers;
 public class PublicController(AppDbContext db, MediaService media) : ControllerBase
 {
     /// <summary>
+    /// Contact details for the landing page. Anonymous by design — these are the values the
+    /// business wants shown publicly. Blank fields are returned as null and hidden by the page.
+    /// </summary>
+    [HttpGet("landing-settings")]
+    public async Task<IActionResult> GetLandingSettings(CancellationToken ct)
+    {
+        var s = await db.LandingSettings.OrderBy(x => x.UpdatedAt).FirstOrDefaultAsync(ct);
+        return Ok(LandingSettingsMapper.ToDto(s));
+    }
+
+    /// <summary>
     /// Streams a user-uploaded media file. Media is immutable once created (content-addressed),
     /// so it is served with a long immutable cache header and supports range requests for
     /// video/audio seeking. Served under /api/* so the existing frontend proxy covers it.
@@ -49,7 +60,9 @@ public class PublicController(AppDbContext db, MediaService media) : ControllerB
         // Derive a URL-safe key from the template name, e.g. "Classic Wedding" → "classic-wedding"
         var templateKey = inv.Template is not null
             ? inv.Template.Name.ToLowerInvariant().Replace(' ', '-')
-            : "classic-wedding";
+            : "serene-beige";
+        // Event category drives the template folder (/templates/<category>/<key>/).
+        var templateCategory = EventTypes.ToKey(inv.Template?.EventType);
 
         var data = InvitationDataMapper.ToData(inv);
         return Ok(new
@@ -59,6 +72,7 @@ public class PublicController(AppDbContext db, MediaService media) : ControllerB
             title = inv.Title,
             eventDate = inv.EventDate,
             templateKey,
+            templateCategory,
             data
         });
     }
@@ -83,7 +97,9 @@ public class PublicController(AppDbContext db, MediaService media) : ControllerB
         var inv = guest.Invitation;
         var templateKey = inv.Template is not null
             ? inv.Template.Name.ToLowerInvariant().Replace(' ', '-')
-            : "classic-wedding";
+            : "serene-beige";
+        // Event category drives the template folder (/templates/<category>/<key>/).
+        var templateCategory = EventTypes.ToKey(inv.Template?.EventType);
 
         return Ok(new
         {
@@ -92,6 +108,7 @@ public class PublicController(AppDbContext db, MediaService media) : ControllerB
             title = inv.Title,
             eventDate = inv.EventDate,
             templateKey,
+            templateCategory,
             data = InvitationDataMapper.ToData(inv),
             guest = new
             {

@@ -12,6 +12,5 @@ public enum SectionType
     Timeline,
     Families,
     Memories,
-    Music,
-    Slideshow
+    Music
 }

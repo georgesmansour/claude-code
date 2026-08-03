@@ -142,11 +142,20 @@ if (app.Environment.IsDevelopment())
     {
         app.UseRewriter(new RewriteOptions()
             // Personal guest links: /invite/<name-slug> → the dispatcher, which reads the slug.
-            .AddRewrite(@"^invite/[A-Za-z0-9._~-]+$", "index.html", skipRemainingRules: true)
+            .AddRewrite(@"^invite/[A-Za-z0-9._~-]+$", "invitation.html", skipRemainingRules: true)
+            // Template folder without a file: /templates/wedding/elegant-noir → its index.html.
+            .AddRewrite(@"^(templates/[A-Za-z0-9-]+/[A-Za-z0-9-]+)/?$", "$1/index.html", skipRemainingRules: true)
             // Any extensionless single-segment page path → its .html file
-            // (e.g. /serene-beige → /serene-beige.html). New templates need no changes here.
-            // "health" is excluded because it's a mapped endpoint, not a page.
+            // (e.g. /admin → /admin.html). "health" is excluded because it's a mapped endpoint.
             .AddRewrite(@"^(?!health$)([A-Za-z0-9-]+)$", "$1.html", skipRemainingRules: true));
+
+        // Serve the landing page at "/" (and index.html inside any template folder), matching
+        // what static hosts like Netlify do by default. Must run before UseStaticFiles.
+        app.UseDefaultFiles(new DefaultFilesOptions
+        {
+            FileProvider = new PhysicalFileProvider(frontendDir),
+            RequestPath  = ""
+        });
 
         app.UseStaticFiles(new StaticFileOptions
         {

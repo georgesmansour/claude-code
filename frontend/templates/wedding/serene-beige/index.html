@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wedding Invitation</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Montserrat:wght@300;400;500&family=Great+Vibes&display=swap" rel="stylesheet">
-<script src="./config.js"></script>
+<script src="../../../shared/config.js"></script>
+<script src="../../../shared/demo-data.js"></script>
 <style>
   :root {
     --bg-color: #FDFBF7;      /* very light beige */
@@ -18,14 +19,18 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* overflow-x on <body> alone is ignored by mobile browsers when <html> can still scroll,
+     which is what allowed the page to be dragged sideways on phones/tablets. */
+  html, body { max-width: 100%; overflow-x: hidden; }
+
   body {
     background-color: var(--bg-color);
     color: var(--text-main);
     font-family: 'Montserrat', sans-serif;
     font-weight: 300;
     line-height: 1.6;
-    overflow-x: hidden;
   }
+  img, video { max-width: 100%; }
 
   h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; font-weight: 500; color: var(--text-main); }
 
@@ -46,16 +51,20 @@
     content: ''; position: absolute; inset: 0;
     background: rgba(74, 59, 50, 0.4); z-index: 1;
   }
-  .hero-content { position: relative; z-index: 2; padding: 0 1rem; }
+  .hero-content { position: relative; z-index: 2; padding: 0 1rem; max-width: 100%; }
+  /* Fluid sizing + wrapping so long names shrink and wrap instead of forcing the hero wider
+     than the screen (which is what produced the horizontal scroll on mobile). */
   .monogram {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 6rem; letter-spacing: -5px; margin-bottom: 20px;
+    font-size: clamp(3.2rem, 17vw, 6rem); letter-spacing: -5px; margin-bottom: 20px;
     font-weight: 400; color: var(--bg-color);
+    max-width: 100%; overflow-wrap: anywhere;
   }
   .hero-names {
     font-family: 'Montserrat', sans-serif;
-    letter-spacing: 6px; font-size: 1.2rem; text-transform: uppercase;
+    letter-spacing: clamp(2px, 1.2vw, 6px); font-size: clamp(.85rem, 3.6vw, 1.2rem); text-transform: uppercase;
     display: flex; align-items: center; justify-content: center; gap: 15px;
+    flex-wrap: wrap; max-width: 100%; overflow-wrap: anywhere;
     color: var(--bg-color);
   }
   .hero-names .heart { font-size: .8rem; color: var(--accent); }
@@ -167,6 +176,11 @@
     transition: opacity .3s;
   }
   .btn-map:hover { opacity: .85; }
+  /* Compact variant for the timeline steps — the full-size button is too bulky on a phone. */
+  .btn-map-sm {
+    padding: 4px 10px; font-size: .62rem; letter-spacing: .5px;
+    border-radius: 999px; margin-top: 6px;
+  }
 
   /* ── TIMELINE ── */
   .timeline-wrapper { position: relative; max-width: 600px; margin: 20px auto; padding: 40px 0; }
@@ -193,13 +207,16 @@
   /* ── GALLERY ── */
   .section-title { text-align: center; font-size: 2rem; margin-bottom: 20px; }
   .gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 40px 0 0; }
+  /* Proportional boxes (not fixed pixel heights) so photos scale with the column and are
+     only lightly cropped instead of being chopped to a fixed 300px regardless of width. */
   .gallery img {
-    width: 100%; height: 300px; object-fit: cover;
+    width: 100%; aspect-ratio: 4 / 3; height: auto;
+    object-fit: cover; object-position: center;
     border-radius: 8px; border: 1px solid var(--border-light);
     transition: transform .4s ease;
   }
   .gallery img:hover { transform: scale(1.02); }
-  .gallery img:nth-child(1) { grid-column: span 2; height: 400px; }
+  .gallery img:nth-child(1) { grid-column: span 2; aspect-ratio: 16 / 9; }
 
   /* ── INFO BOXES ── */
   .info-box {
@@ -271,9 +288,12 @@
   footer .a { color: var(--accent); font-style: normal; }
 
   @media (max-width: 768px) {
+    /* One column on phones, and photos keep their OWN proportions (no forced landscape box),
+       so portrait shots are shown in full instead of being cropped to a wide middle band. */
     .gallery { grid-template-columns: 1fr; }
-    .gallery img { height: 250px; }
-    .gallery img:nth-child(1) { grid-column: span 1; height: 300px; }
+    .gallery img, .gallery img:nth-child(1) {
+      grid-column: span 1; aspect-ratio: auto; height: auto; object-fit: contain;
+    }
   }
   /* Raise form controls to 16px so iOS Safari doesn't zoom-in on focus. */
   @media (max-width: 640px) {
@@ -283,7 +303,8 @@
 </head>
 <body>
 
-<script src="./invitation-music.js" defer></script>
+<script src="../../../shared/demo-data.js"></script>
+<script src="../../../shared/invitation-music.js" defer></script>
 
 <main id="main"></main>
 
@@ -347,6 +368,8 @@ const esc = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const nl2br = s => esc(s).replace(/\n/g, '<br>');
+// Resolve API-relative uploaded media (/api/public/media/<id>) against API_BASE.
+const mediaSrc = u => u && /^\/api\//.test(u) ? (API_BASE || '') + u : (u || '');
 // Format a yyyy-MM-dd deadline as a readable date; falls back to the raw string.
 function fmtDate(s) {
   if (!s) return '';
@@ -357,6 +380,12 @@ function fmtDate(s) {
 // ── DATA LOADING ───────────────────────────────────────
 async function loadData() {
   const params = parseQuery();
+
+  // ?demo=<key> renders the built-in sample invitation (sales/preview mode, no API call).
+  if (window.getDemoData) {
+    const demo = window.getDemoData(window.location.search);
+    if (demo) return mergeDefaults(demo);
+  }
 
   const enc = params.get('d');
   if (enc) {
@@ -516,6 +545,7 @@ function renderTimeline(t) {
       <div class="timeline-icon">${esc(x.icon || '✦')}</div>
       <div class="timeline-time">${esc(x.time || '')}</div>
       <div class="timeline-desc">${esc(x.title || '')}${x.subtitle ? ` — ${esc(x.subtitle)}` : ''}</div>
+      ${x.url ? `<div><a class="btn-map btn-map-sm" href="${esc(x.url)}" target="_blank" rel="noopener">Location</a></div>` : ''}
     </div>`).join('');
   return `
   <section class="section">
@@ -525,8 +555,9 @@ function renderTimeline(t) {
 }
 
 function renderGallery(g) {
-  const imgs = (g.items || []).map(x =>
-    `<img src="${esc(x.url)}" alt="${esc(x.caption || 'Photo')}" loading="lazy">`).join('');
+  // Skip entries whose image was removed — rendering src="" shows a broken-image placeholder.
+  const imgs = (g.items || []).filter(x => x && x.url).map(x =>
+    `<img src="${esc(mediaSrc(x.url))}" alt="${esc(x.caption || 'Photo')}" loading="lazy">`).join('');
   return `
   <section class="section">
     ${g.title ? `<h3 class="section-title">${esc(g.title)}</h3>` : ''}
@@ -622,7 +653,7 @@ function build(data) {
   parts.push(renderCalendar(data.countdown));
   if (data.locations && data.locations.enabled !== false && (data.locations.items || []).length) parts.push(renderLocations(data.locations));
   if (data.timeline  && data.timeline.enabled  !== false && (data.timeline.items || []).length)  parts.push(renderTimeline(data.timeline));
-  if (data.gallery   && data.gallery.enabled   !== false && (data.gallery.items  || []).length)  parts.push(renderGallery(data.gallery));
+  if (data.gallery   && data.gallery.enabled   !== false && (data.gallery.items  || []).some(x => x && x.url)) parts.push(renderGallery(data.gallery));
   parts.push(renderInfoBoxes(data));
   if (data.rsvp && data.rsvp.enabled !== false) parts.push(renderRsvp(data.rsvp, maxPeople, guestName));
   parts.push('<footer>Made with <span class="a">❤</span></footer>');

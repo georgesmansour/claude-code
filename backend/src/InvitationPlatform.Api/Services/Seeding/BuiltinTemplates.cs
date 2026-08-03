@@ -1,7 +1,9 @@
+using InvitationPlatform.Domain.Enums;
+
 namespace InvitationPlatform.Api.Services.Seeding;
 
-/// <summary>One built-in template definition (name, description, and its default data JSON).</summary>
-public record TemplateSeed(string Name, string Description, string Data);
+/// <summary>One built-in template definition (name, event category, description, default data JSON).</summary>
+public record TemplateSeed(string Name, string Description, string Data, string EventType = EventTypes.Wedding);
 
 /// <summary>
 /// The catalogue of application-owned built-in templates. Adding a template here is all that is

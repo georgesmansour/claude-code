@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1500" width="1200" height="1500" role="img" aria-label="Floral wedding arch">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7f2ea"/><stop offset="1" stop-color="#efe6d9"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9bd8b"/><stop offset="1" stop-color="#b2925f"/>
+    </linearGradient>
+    <g id="leaf"><path d="M0 0c14-8 30-6 40 4-10 10-26 12-40 4z" fill="#b9c7ae"/></g>
+    <g id="bloom">
+      <circle r="13" fill="#e8d3d0"/><circle r="7" fill="#dcbdb8"/>
+      <g fill="#efe0dd">
+        <ellipse cx="0" cy="-15" rx="7" ry="11"/><ellipse cx="15" cy="0" rx="11" ry="7"/>
+        <ellipse cx="0" cy="15" rx="7" ry="11"/><ellipse cx="-15" cy="0" rx="11" ry="7"/>
+      </g>
+      <circle r="5" fill="#cfa97f"/>
+    </g>
+  </defs>
+
+  <rect width="1200" height="1500" fill="url(#bg)"/>
+
+  <!-- arch -->
+  <path d="M300 1320V620a300 300 0 0 1 600 0v700" fill="none" stroke="url(#gold)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M348 1320V620a252 252 0 0 1 504 0v700" fill="none" stroke="#d8c6a8" stroke-width="2" opacity=".7"/>
+
+  <!-- foliage along the arch -->
+  <g opacity=".95">
+    <g transform="translate(322,900) rotate(-95)"><use href="#leaf"/></g>
+    <g transform="translate(330,800) rotate(-80)"><use href="#leaf"/></g>
+    <g transform="translate(352,700) rotate(-62)"><use href="#leaf"/></g>
+    <g transform="translate(400,600) rotate(-45)"><use href="#leaf"/></g>
+    <g transform="translate(470,520) rotate(-28)"><use href="#leaf"/></g>
+    <g transform="translate(560,470) rotate(-10)"><use href="#leaf"/></g>
+    <g transform="translate(660,468) rotate(12) scale(-1,1)"><use href="#leaf"/></g>
+    <g transform="translate(752,510) rotate(30) scale(-1,1)"><use href="#leaf"/></g>
+    <g transform="translate(828,586) rotate(48) scale(-1,1)"><use href="#leaf"/></g>
+    <g transform="translate(870,690) rotate(66) scale(-1,1)"><use href="#leaf"/></g>
+    <g transform="translate(880,800) rotate(82) scale(-1,1)"><use href="#leaf"/></g>
+    <g transform="translate(878,900) rotate(95) scale(-1,1)"><use href="#leaf"/></g>
+  </g>
+
+  <!-- blooms -->
+  <g>
+    <g transform="translate(600,455) scale(1.5)"><use href="#bloom"/></g>
+    <g transform="translate(505,487) scale(1.15)"><use href="#bloom"/></g>
+    <g transform="translate(700,492) scale(1.2)"><use href="#bloom"/></g>
+    <g transform="translate(414,560) scale(1)"><use href="#bloom"/></g>
+    <g transform="translate(792,570) scale(1.05)"><use href="#bloom"/></g>
+    <g transform="translate(348,690) scale(.9)"><use href="#bloom"/></g>
+    <g transform="translate(858,700) scale(.95)"><use href="#bloom"/></g>
+    <g transform="translate(330,1180) scale(1.1)"><use href="#bloom"/></g>
+    <g transform="translate(872,1180) scale(1.1)"><use href="#bloom"/></g>
+  </g>
+
+  <!-- aisle -->
+  <path d="M470 1500 600 1320l130 180z" fill="#e6dbc9" opacity=".7"/>
+  <g opacity=".5" fill="#cfa97f">
+    <circle cx="540" cy="1420" r="5"/><circle cx="660" cy="1400" r="5"/>
+    <circle cx="600" cy="1470" r="5"/><circle cx="500" cy="1478" r="4"/><circle cx="704" cy="1462" r="4"/>
+  </g>
+</svg>

@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900" role="img" aria-label="Chapel ceremony venue">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4ece0"/><stop offset="1" stop-color="#e9dcc8"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e7d3ae"/><stop offset="1" stop-color="#cbb08a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1400" height="900" fill="url(#sky)"/>
+
+  <!-- sun glow -->
+  <circle cx="700" cy="250" r="190" fill="#f7edd9" opacity=".8"/>
+
+  <!-- chapel -->
+  <g>
+    <!-- body -->
+    <path d="M520 820V430l180-150 180 150v390z" fill="#f2ebdd" stroke="#c9b291" stroke-width="5"/>
+    <!-- roof line -->
+    <path d="M700 280 880 430H520z" fill="#e6d9c2" stroke="#c9b291" stroke-width="5"/>
+    <!-- steeple -->
+    <path d="M660 280V180h80v100z" fill="#efe6d5" stroke="#c9b291" stroke-width="4"/>
+    <path d="M700 180V96" stroke="#b2925f" stroke-width="7" stroke-linecap="round"/>
+    <path d="M672 128h56" stroke="#b2925f" stroke-width="7" stroke-linecap="round"/>
+    <!-- arched door -->
+    <path d="M652 820V620a48 48 0 0 1 96 0v200z" fill="#dfcfb2" stroke="#b99a6b" stroke-width="4"/>
+    <path d="M700 620v200" stroke="#b99a6b" stroke-width="3"/>
+    <!-- arched windows -->
+    <g fill="url(#glass)" stroke="#c9b291" stroke-width="3">
+      <path d="M566 560V500a26 26 0 0 1 52 0v60z"/>
+      <path d="M782 560V500a26 26 0 0 1 52 0v60z"/>
+    </g>
+    <!-- rose window -->
+    <circle cx="700" cy="500" r="34" fill="#e7d3ae" stroke="#c9b291" stroke-width="4"/>
+    <path d="M700 466v68M666 500h68" stroke="#c9b291" stroke-width="3"/>
+  </g>
+
+  <!-- ground -->
+  <path d="M0 820h1400v80H0z" fill="#e0d4bd"/>
+  <path d="M0 820h1400" stroke="#cbb08a" stroke-width="2" opacity=".6"/>
+
+  <!-- aisle runner -->
+  <path d="M610 900h180l-42-80h-96z" fill="#f2ebdd"/>
+
+  <!-- trees -->
+  <g fill="#b3c3a6">
+    <ellipse cx="300" cy="720" rx="86" ry="110"/><rect x="292" y="800" width="16" height="40" fill="#a58f6c"/>
+    <ellipse cx="1100" cy="720" rx="86" ry="110"/><rect x="1092" y="800" width="16" height="40" fill="#a58f6c"/>
+    <ellipse cx="180" cy="770" rx="60" ry="76" opacity=".8"/>
+    <ellipse cx="1230" cy="770" rx="60" ry="76" opacity=".8"/>
+  </g>
+
+  <!-- chairs -->
+  <g stroke="#c2ab88" stroke-width="5" fill="none">
+    <path d="M470 800v-46h48v46M470 776h48"/>
+    <path d="M400 812v-46h48v46M400 788h48"/>
+    <path d="M882 800v-46h48v46M882 776h48"/>
+    <path d="M952 812v-46h48v46M952 788h48"/>
+  </g>
+</svg>

@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900" role="img" aria-label="Wedding reception table setting">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6efe4"/><stop offset="1" stop-color="#e7dac6"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#dcc39a"/><stop offset="1" stop-color="#b2925f"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1400" height="900" fill="url(#bg)"/>
+  <!-- table edge -->
+  <path d="M0 660h1400" stroke="#d8c6ab" stroke-width="3"/>
+  <rect y="660" width="1400" height="240" fill="#efe4d3"/>
+
+  <!-- runner -->
+  <path d="M180 300h1040v360H180z" fill="#efe6d8" opacity=".85"/>
+  <path d="M180 300h1040M180 660h1040" stroke="#d3bd98" stroke-width="3"/>
+
+  <!-- charger + plate -->
+  <g transform="translate(700,470)">
+    <circle r="160" fill="#f3ece0" stroke="#c8ab7f" stroke-width="5"/>
+    <circle r="120" fill="#fbf7f0" stroke="#d8c6ab" stroke-width="3"/>
+    <circle r="74" fill="#f6efe4" stroke="#e0d0b4" stroke-width="2"/>
+    <!-- folded napkin -->
+    <path d="M-46-30h92l-16 96h-60z" fill="#e6d6bd"/>
+    <path d="M-46-30h92" stroke="#cdb492" stroke-width="4"/>
+  </g>
+
+  <!-- cutlery -->
+  <g stroke="#bfa27a" stroke-width="7" stroke-linecap="round">
+    <path d="M470 380v190"/><path d="M508 380v190"/>
+    <path d="M900 380v190"/>
+  </g>
+  <circle cx="470" cy="360" r="12" fill="#cbb089"/>
+  <circle cx="508" cy="360" r="12" fill="#cbb089"/>
+  <path d="M888 348h24v46h-24z" fill="#cbb089"/>
+
+  <!-- glasses -->
+  <g transform="translate(1010,330)">
+    <path d="M-34 0h68l-10 78a24 24 0 0 1-48 0z" fill="#eef2f0" stroke="#cfd8d2" stroke-width="3"/>
+    <path d="M0 102v56M-22 158h44" stroke="#cfd8d2" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(1090,352)" opacity=".9">
+    <path d="M-26 0h52l-8 62a18 18 0 0 1-36 0z" fill="#f6ece9" stroke="#dcc9c3" stroke-width="3"/>
+    <path d="M0 82v44M-18 126h36" stroke="#dcc9c3" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <!-- candles -->
+  <g transform="translate(300,250)">
+    <rect x="-14" y="60" width="28" height="150" rx="6" fill="#f2e8d8"/>
+    <path d="M0 40c14 12 14 26 0 34-14-8-14-22 0-34z" fill="#e8b96a"/>
+    <rect x="-30" y="210" width="60" height="16" rx="6" fill="#c8ab7f"/>
+  </g>
+  <g transform="translate(230,320)" opacity=".9">
+    <rect x="-12" y="60" width="24" height="110" rx="6" fill="#f2e8d8"/>
+    <path d="M0 42c12 10 12 22 0 30-12-8-12-20 0-30z" fill="#e8b96a"/>
+    <rect x="-26" y="170" width="52" height="14" rx="6" fill="#c8ab7f"/>
+  </g>
+
+  <!-- centrepiece florals -->
+  <g transform="translate(700,232)">
+    <g fill="#b3c3a6">
+      <ellipse cx="-96" cy="10" rx="42" ry="16"/><ellipse cx="96" cy="10" rx="42" ry="16"/>
+      <ellipse cx="-52" cy="-24" rx="34" ry="14" transform="rotate(-18 -52 -24)"/>
+      <ellipse cx="52" cy="-24" rx="34" ry="14" transform="rotate(18 52 -24)"/>
+    </g>
+    <circle cx="0" cy="-14" r="30" fill="#eddcd8"/><circle cx="0" cy="-14" r="15" fill="#d9b6b0"/>
+    <circle cx="-56" cy="6" r="22" fill="#f0e2de"/><circle cx="56" cy="6" r="22" fill="#f0e2de"/>
+    <circle cx="-28" cy="18" r="15" fill="#e2c6c1"/><circle cx="28" cy="18" r="15" fill="#e2c6c1"/>
+  </g>
+
+  <!-- scattered petals -->
+  <g opacity=".55" fill="#dcbdb8">
+    <ellipse cx="330" cy="600" rx="14" ry="8" transform="rotate(-20 330 600)"/>
+    <ellipse cx="1080" cy="590" rx="14" ry="8" transform="rotate(15 1080 590)"/>
+    <ellipse cx="560" cy="628" rx="12" ry="7" transform="rotate(35 560 628)"/>
+    <ellipse cx="880" cy="622" rx="12" ry="7" transform="rotate(-35 880 622)"/>
+  </g>
+</svg>

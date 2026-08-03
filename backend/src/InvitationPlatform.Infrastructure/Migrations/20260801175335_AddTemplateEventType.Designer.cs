@@ -3,6 +3,7 @@ using System;
 using InvitationPlatform.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace InvitationPlatform.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260801175335_AddTemplateEventType")]
+    partial class AddTemplateEventType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -500,70 +503,6 @@ namespace InvitationPlatform.Infrastructure.Migrations
                     b.HasIndex("InvitationId", "OrderIndex");
 
                     b.ToTable("invitation_sections", (string)null);
-                });
-
-            modelBuilder.Entity("InvitationPlatform.Domain.Entities.LandingSettings", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<string>("CompanyAddress")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
-                        .HasColumnName("company_address");
-
-                    b.Property<string>("CompanyEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("company_email");
-
-                    b.Property<string>("FacebookUrl")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
-                        .HasColumnName("facebook_url");
-
-                    b.Property<string>("InstagramUrl")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
-                        .HasColumnName("instagram_url");
-
-                    b.Property<string>("MapEmbedUrl")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)")
-                        .HasColumnName("map_embed_url");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("phone_number");
-
-                    b.Property<string>("PinterestUrl")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
-                        .HasColumnName("pinterest_url");
-
-                    b.Property<string>("TikTokUrl")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
-                        .HasColumnName("tiktok_url");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("WhatsAppNumber")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("whatsapp_number");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("landing_settings", (string)null);
                 });
 
             modelBuilder.Entity("InvitationPlatform.Domain.Entities.Location", b =>

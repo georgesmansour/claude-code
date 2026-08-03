@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200" role="img" aria-label="Bride and groom silhouette at golden hour">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3e6d0"/><stop offset=".55" stop-color="#efd9bb"/><stop offset="1" stop-color="#e7c9a4"/>
+    </linearGradient>
+    <radialGradient id="sun" cx=".5" cy=".5">
+      <stop offset="0" stop-color="#fbf0da"/><stop offset="1" stop-color="#fbf0da" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1600" height="1200" fill="url(#sky)"/>
+  <circle cx="800" cy="560" r="360" fill="url(#sun)"/>
+  <circle cx="800" cy="560" r="118" fill="#f7e7c8"/>
+
+  <!-- distant treeline -->
+  <g fill="#d9c3a1" opacity=".75">
+    <ellipse cx="150" cy="840" rx="150" ry="60"/><ellipse cx="360" cy="856" rx="120" ry="46"/>
+    <ellipse cx="1450" cy="840" rx="150" ry="60"/><ellipse cx="1240" cy="856" rx="120" ry="46"/>
+  </g>
+
+  <!-- ground -->
+  <path d="M0 880h1600v320H0z" fill="#d3b48c"/>
+
+  <!-- couple silhouette -->
+  <g fill="#8a6f4e">
+    <!-- groom -->
+    <path d="M726 880V690c0-42 18-70 44-70 26 0 44 28 44 70v190z"/>
+    <circle cx="770" cy="592" r="34"/>
+    <path d="M726 700c-16 8-24 26-24 52v40l24-6z"/>
+    <!-- bride: gown -->
+    <path d="M868 880c-52 0-92-26-92-58 0-46 14-90 22-128 6-30 22-48 44-48s38 18 44 48c10 46 34 96 46 132 10 30-12 54-64 54z"/>
+    <circle cx="846" cy="586" r="32"/>
+    <!-- veil -->
+    <path d="M846 554c34 0 52 22 52 60 0 62-18 130-34 180l-20-4c14-52 30-114 30-172 0-30-12-46-28-46z" opacity=".55"/>
+    <!-- joined hands -->
+    <path d="M812 726c14-8 26-8 40 0l-6 16c-10-6-18-6-28 0z"/>
+  </g>
+
+  <!-- petals in the air -->
+  <g fill="#c9a97f" opacity=".5">
+    <ellipse cx="380" cy="420" rx="16" ry="9" transform="rotate(-25 380 420)"/>
+    <ellipse cx="1220" cy="380" rx="16" ry="9" transform="rotate(20 1220 380)"/>
+    <ellipse cx="520" cy="620" rx="13" ry="7" transform="rotate(40 520 620)"/>
+    <ellipse cx="1090" cy="640" rx="13" ry="7" transform="rotate(-40 1090 640)"/>
+    <ellipse cx="300" cy="700" rx="11" ry="6" transform="rotate(10 300 700)"/>
+    <ellipse cx="1330" cy="700" rx="11" ry="6" transform="rotate(-10 1330 700)"/>
+  </g>
+</svg>

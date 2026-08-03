@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" role="img" aria-label="Rose petals and botanical pattern">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7f1e9"/><stop offset="1" stop-color="#eadfd0"/>
+    </linearGradient>
+    <g id="p"><ellipse rx="26" ry="15" fill="#e3c4bf"/><path d="M-26 0a26 15 0 0 1 52 0z" fill="#eed7d3"/></g>
+    <g id="sprig">
+      <path d="M0 0c0-40 8-72 22-96" fill="none" stroke="#a9bb9c" stroke-width="4"/>
+      <ellipse cx="-9" cy="-22" rx="15" ry="7" fill="#b3c3a6" transform="rotate(-30 -9 -22)"/>
+      <ellipse cx="12" cy="-44" rx="15" ry="7" fill="#b3c3a6" transform="rotate(30 12 -44)"/>
+      <ellipse cx="-6" cy="-66" rx="13" ry="6" fill="#bccdb0" transform="rotate(-25 -6 -66)"/>
+      <ellipse cx="14" cy="-86" rx="12" ry="6" fill="#bccdb0" transform="rotate(28 14 -86)"/>
+    </g>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+
+  <!-- soft light -->
+  <ellipse cx="800" cy="420" rx="620" ry="360" fill="#fbf6ee" opacity=".65"/>
+
+  <!-- botanical corners -->
+  <g opacity=".85">
+    <g transform="translate(150,1000) scale(1.5)"><use href="#sprig"/></g>
+    <g transform="translate(300,1000) scale(1.2) rotate(12)"><use href="#sprig"/></g>
+    <g transform="translate(1450,1000) scale(1.5) rotate(-8)"><use href="#sprig"/></g>
+    <g transform="translate(1300,1000) scale(1.2) rotate(-16)"><use href="#sprig"/></g>
+  </g>
+
+  <!-- scattered petals -->
+  <g opacity=".9">
+    <g transform="translate(260,180) rotate(-24)"><use href="#p"/></g>
+    <g transform="translate(520,120) rotate(18) scale(.85)"><use href="#p"/></g>
+    <g transform="translate(760,220) rotate(-8) scale(1.1)"><use href="#p"/></g>
+    <g transform="translate(1010,140) rotate(32) scale(.9)"><use href="#p"/></g>
+    <g transform="translate(1290,210) rotate(-18)"><use href="#p"/></g>
+    <g transform="translate(180,430) rotate(40) scale(.8)"><use href="#p"/></g>
+    <g transform="translate(430,520) rotate(-36) scale(1.05)"><use href="#p"/></g>
+    <g transform="translate(700,470) rotate(14) scale(.9)"><use href="#p"/></g>
+    <g transform="translate(980,540) rotate(-28)"><use href="#p"/></g>
+    <g transform="translate(1240,470) rotate(22) scale(.95)"><use href="#p"/></g>
+    <g transform="translate(1430,380) rotate(-12) scale(.85)"><use href="#p"/></g>
+    <g transform="translate(340,740) rotate(8) scale(1.1)"><use href="#p"/></g>
+    <g transform="translate(620,800) rotate(-30) scale(.9)"><use href="#p"/></g>
+    <g transform="translate(900,760) rotate(26)"><use href="#p"/></g>
+    <g transform="translate(1150,820) rotate(-14) scale(1.05)"><use href="#p"/></g>
+  </g>
+
+  <!-- centred monogram rule -->
+  <g stroke="#c2a068" stroke-width="3" opacity=".8">
+    <path d="M600 620h160M840 620h160"/>
+  </g>
+  <g transform="translate(800,620)" fill="none" stroke="#b99a6b" stroke-width="4">
+    <circle r="26"/><circle r="14"/>
+  </g>
+</svg>

@@ -22,7 +22,6 @@ public class InvitationData
     public FamiliesData? Families { get; set; }
     public MemoriesData? Memories { get; set; }
     public MusicData? Music { get; set; }
-    public SlideshowData? Slideshow { get; set; }
 }
 
 public class CoverData
@@ -104,15 +103,6 @@ public class RsvpData
     public string? DeclineMessage { get; set; }
 }
 
-public class SlideshowData
-{
-    public bool Enabled { get; set; } = true;
-    /// <summary>Seconds each image is shown before rotating. Clamped to a sane range on save.</summary>
-    public int IntervalSeconds { get; set; } = 6;
-    /// <summary>Ordered image URLs (user-uploaded media references).</summary>
-    public List<string> Images { get; set; } = [];
-}
-
 public class CustomSection
 {
     public bool Enabled { get; set; } = true;
@@ -150,6 +140,8 @@ public class TimelineItem
     public string? Title { get; set; }
     public string? Subtitle { get; set; }
     public string? Icon { get; set; }
+    /// <summary>Optional map/location link shown as a button on the timeline step.</summary>
+    public string? Url { get; set; }
 }
 
 public class FamiliesData
@@ -185,7 +177,8 @@ public class MusicData
 // ── INVITATION CRUD ────────────────────────────────────────
 public record InvitationListItem(
     Guid Id, string Slug, string Title, string Status,
-    DateTime? EventDate, int RsvpCount, DateTime UpdatedAt);
+    DateTime? EventDate, int RsvpCount, DateTime UpdatedAt,
+    string? TemplateName = null, string? TemplateEventType = null);
 
 public record InvitationFull(
     Guid Id, string Slug, string Title, string Status,
@@ -204,10 +197,11 @@ public record UpdateInvitationRequest(
 // ── TEMPLATE ───────────────────────────────────────────────
 public record TemplateDto(
     Guid Id, string Name, string? Description,
-    bool IsBuiltin, bool IsActive, InvitationData Data);
+    bool IsBuiltin, bool IsActive, InvitationData Data,
+    string EventType = "Wedding");
 
-public record CreateTemplateRequest(string Name, string? Description, InvitationData Data);
-public record UpdateTemplateRequest(string Name, string? Description, bool IsActive, InvitationData Data);
+public record CreateTemplateRequest(string Name, string? Description, InvitationData Data, string? EventType = null);
+public record UpdateTemplateRequest(string Name, string? Description, bool IsActive, InvitationData Data, string? EventType = null);
 
 // ── CLIENT ACCOUNT ─────────────────────────────────────────
 // Email is optional as long as a phone is supplied (validated server-side).
@@ -256,6 +250,14 @@ public record UpdateGuestRequest(string Name, int MaxAttendees);
 
 // ── CLIENT SELF-EDIT ───────────────────────────────────────
 public record ClientUpdateInvitationRequest(string Title, InvitationData Data);
+
+// ── LANDING PAGE SETTINGS ──────────────────────────────────
+// Public contact details shown on the landing page; every field is optional and blank ones
+// are simply not rendered.
+public record LandingSettingsDto(
+    string? CompanyEmail, string? PhoneNumber, string? WhatsAppNumber, string? CompanyAddress,
+    string? InstagramUrl, string? FacebookUrl, string? TikTokUrl, string? PinterestUrl,
+    string? MapEmbedUrl);
 
 // ── DASHBOARD ──────────────────────────────────────────────
 public record DashboardSummary(
