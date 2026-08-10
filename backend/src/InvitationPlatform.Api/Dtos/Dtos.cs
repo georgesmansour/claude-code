@@ -259,6 +259,16 @@ public record LandingSettingsDto(
     string? InstagramUrl, string? FacebookUrl, string? TikTokUrl, string? PinterestUrl,
     string? MapEmbedUrl);
 
+// ── DEMO REQUESTS (landing page enquiry form) ──────────────
+public record DemoRequestSubmission(
+    string? Name, string? EventType, string? Email,
+    string? Phone, string? Company, string? Message);
+
+public record DemoRequestDto(
+    Guid Id, string Name, string? EventType, string? Email, string? Phone,
+    string? Company, string? Message, DateTime? ReadAt,
+    DateTime? EmailSentAt, string? EmailError, DateTime CreatedAt);
+
 // ── DASHBOARD ──────────────────────────────────────────────
 public record DashboardSummary(
     Guid InvitationId, string Slug, string Title,

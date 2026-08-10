@@ -50,6 +50,8 @@
     transition: opacity 1s ease, transform 1s ease;
   }
   #envelope.opened { opacity: 0; transform: translateY(-6%); pointer-events: none; }
+  /* Guest-specific text stays invisible (but keeps its space) until the data has loaded. */
+  [data-pending] { visibility: hidden; }
   .env-greeting {
     font-family: 'Cormorant Garamond', serif;
     font-style: italic; font-weight: 300;
@@ -92,6 +94,16 @@
 
   /* ── HERO ── */
   #hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 5rem; }
+  /* Cover background video. Everything here is scoped to .has-video so a hero WITHOUT a video keeps
+     its original layout exactly — an earlier unscoped `#hero > *` rule out-specified .hero-ring's
+     `position:absolute` and turned the centred ring into a block that pushed the names off-centre. */
+  #hero.has-video { position: relative; overflow: hidden; }
+  .hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+  .hero-scrim { position: absolute; inset: 0; background: linear-gradient(rgba(15,12,9,.72), rgba(15,12,9,.86)); z-index: 1; }
+  /* Lift the content above the video/scrim. .hero-ring is excluded so it keeps its own
+     absolute centring; it only needs the z-index. */
+  #hero.has-video > *:not(.hero-video):not(.hero-scrim):not(.hero-ring) { position: relative; z-index: 2; }
+  #hero.has-video > .hero-ring { z-index: 2; }
   .hero-ring {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%,-52%);
     width: min(88vw, 460px); height: min(88vw, 460px);
@@ -246,6 +258,8 @@
     outline: none; appearance: none; transition: border-color .25s;
   }
   .rsvp-input::placeholder, .rsvp-textarea::placeholder { color: var(--muted); }
+  /* Locked guest name on a personal invitation. */
+  .rsvp-input[readonly] { opacity: .8; cursor: default; border-style: dashed; }
   .rsvp-input:focus, .rsvp-select:focus, .rsvp-textarea:focus { border-color: var(--gold); }
   .rsvp-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c9a45c' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1.2rem center; }
   .rsvp-select option { background: var(--card); color: var(--ivory); }
@@ -319,7 +333,10 @@
 
 <!-- Envelope opening screen -->
 <div id="envelope">
-  <p class="env-greeting" id="envGreeting">Dear Guest</p>
+  <!-- Left blank on purpose: the greeting is guest-specific, so showing a generic placeholder
+       would flash "Dear Guest" before the real name arrives. Revealed once data has loaded.
+       &nbsp; reserves the line height so nothing shifts when the name appears. -->
+  <p class="env-greeting" id="envGreeting" data-pending>&nbsp;</p>
   <div class="env-seal" id="envSeal">&amp;</div>
   <div class="env-open">
     <span id="envButtonText">Tap to open</span>
@@ -531,8 +548,15 @@ function renderHero(data) {
   const outroLine = [c.hostText, c.hostOutro].filter(Boolean)
     .map(s => `<p class="hero-host reveal">${nl2br(s)}</p>`).join('');
 
+  // A cover video takes precedence over the cover image; the image becomes its poster so the
+  // hero still looks right before the first frame decodes (and if autoplay is refused).
+  const coverImage = mediaSrc(c.image || '');
+  const coverVideo = mediaSrc(c.video || '');
   return `
-  <section id="hero"${bgStyle(c.image)}>
+  <section id="hero"${coverVideo ? ' class="has-video"' : bgStyle(c.image)}>
+    ${coverVideo ? `<video class="hero-video" data-bg-video autoplay loop muted playsinline preload="metadata"
+       ${coverImage ? `poster="${esc(coverImage)}"` : ''} src="${esc(coverVideo)}"></video>
+      <div class="hero-scrim"></div>` : ''}
     <div class="hero-ring"></div>
     ${c.eventLabel ? `<p class="label reveal">${esc(c.eventLabel)}</p>` : ''}
     ${introLine}
@@ -651,8 +675,11 @@ function renderRsvp(r, maxPeople, npValue, guestName) {
     ${deadlineLine ? `<p class="label reveal">${deadlineLine}</p>` : ''}
     ${r.title ? `<h2 class="script sec-title-script reveal">${esc(r.title)}</h2>` : ''}
     <div class="rsvp-form" data-rsvp>
+      <!-- On a personal link the name is fixed: shown for confirmation but not editable.
+           (The server also ignores any submitted name for a known guest.) -->
       <input class="rsvp-input reveal" data-guest-name type="text"
-             placeholder="Your name(s)" value="${esc(guestName || '')}" style="text-align:center;">
+             placeholder="Your name(s)" value="${esc(guestName || '')}" style="text-align:center;"
+             ${guestName ? 'readonly aria-readonly="true" tabindex="-1"' : ''}>
       <select class="rsvp-select reveal" data-party-size>
         ${npValue ? '' : '<option value="">How many of you?</option>'}
         ${opts.join('')}
@@ -700,6 +727,7 @@ function build(data) {
   greetEl.textContent = guestName
     ? `${c.greeting || 'Dear'} ${guestName}`
     : (c.names || data.title || 'Welcome');
+  greetEl.removeAttribute('data-pending');   // reveal only now that the real name is known
   if (c.buttonText) document.getElementById('envButtonText').textContent = c.buttonText;
   if (c.sealImage) {
     const seal = document.getElementById('envSeal');
@@ -723,7 +751,21 @@ function build(data) {
 
   setupReveal();
   startCountdown();
+  startBackgroundVideos();
   if (window.InvitationMusic) InvitationMusic.init(data.music, API_BASE);
+}
+
+// ── BACKGROUND VIDEO ───────────────────────────────────
+// A <video> injected via innerHTML doesn't always pick up the muted PROPERTY from its attribute,
+// and browsers refuse autoplay for anything not muted. Set it explicitly, then start playback —
+// a rejection (e.g. iOS Low Power Mode) is fine: the poster image remains visible.
+function startBackgroundVideos() {
+  document.querySelectorAll('[data-bg-video]').forEach(v => {
+    v.muted = true;
+    v.defaultMuted = true;
+    const p = v.play();
+    if (p && p.catch) p.catch(() => {});
+  });
 }
 
 // ── SCROLL REVEAL ──────────────────────────────────────

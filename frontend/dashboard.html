@@ -596,6 +596,12 @@ function setFilter(f, el) {
 function rsvpNames(r) {
   return (r.guests || []).map(g => g.fullName).filter(Boolean);
 }
+// Display-only wording for an RSVP answer ("No" reads as "Declined"); stored values are unchanged.
+function responseLabel(v) {
+  const s = (v || '').toLowerCase();
+  return s === 'yes' ? 'Accepted' : s === 'no' ? 'Declined' : (v || '—');
+}
+
 function rsvpDisplayName(r) {
   const names = rsvpNames(r);
   if (names.length) return names.join(', ');
@@ -639,7 +645,7 @@ function renderTable() {
       <td>
         ${guestNames || '<span style="color:var(--muted)">—</span>'}
       </td>
-      <td><span class="badge ${badgeCls}">${escHtml(r.response || '—')}</span></td>
+      <td><span class="badge ${badgeCls}">${escHtml(responseLabel(r.response))}</span></td>
       <td style="color:var(--muted)">${r.partySize ?? '—'}</td>
       <td style="font-size:.78rem;color:var(--muted)">${escHtml(r.contactPhone || '—')}</td>
       <td style="white-space:nowrap;color:var(--muted);font-size:.75rem">${date}</td>
@@ -717,6 +723,15 @@ function renderEditForm() {
       </div>
     </div>
 
+    ${d.timeline ? `
+    <div class="edit-section">
+      <div class="edit-section-title">Wedding Timeline</div>
+      <div class="edit-body">
+        <div id="editTimeline"></div>
+        <button class="edit-add-btn" onclick="addEditTimeline()">+ Add timeline event</button>
+      </div>
+    </div>` : ''}
+
     <div class="edit-section">
       <div class="edit-section-title">Gift Registry</div>
       <div class="edit-body">
@@ -745,7 +760,46 @@ function renderEditForm() {
   `;
 
   renderEditLocations();
+  if (d.timeline) renderEditTimeline();
   renderEditGifts();
+}
+
+// Wedding Timeline — same structure and behaviour as Locations above. Only rendered when the
+// template actually has a timeline section, so templates without one show nothing.
+function renderEditTimeline() {
+  const host = document.getElementById('editTimeline');
+  if (!host) return;
+  const items = invEditData?.timeline?.items || [];
+  host.innerHTML = items.length ? items.map((t, i) => `
+    <div class="edit-item-card">
+      <div class="edit-item-header">
+        <span class="edit-item-label">Event ${i + 1}</span>
+        <button class="edit-remove-btn" onclick="removeEditTimeline(${i})">Remove</button>
+      </div>
+      <div class="edit-grid">
+        <div class="edit-field"><label>Time (e.g. 6:30 PM)</label>
+          <input value="${escHtml(t.time||'')}" oninput="invEditData.timeline.items[${i}].time=this.value"></div>
+        <div class="edit-field"><label>Title</label>
+          <input value="${escHtml(t.title||'')}" oninput="invEditData.timeline.items[${i}].title=this.value"></div>
+        <div class="edit-field"><label>Subtitle / venue</label>
+          <input value="${escHtml(t.subtitle||'')}" oninput="invEditData.timeline.items[${i}].subtitle=this.value"></div>
+        <div class="edit-field"><label>Location URL <span style="opacity:.5">(optional)</span></label>
+          <input value="${escHtml(t.url||'')}" placeholder="https://maps.google.com/..."
+                 oninput="invEditData.timeline.items[${i}].url=this.value"></div>
+      </div>
+    </div>`).join('') : '<p style="font-size:.78rem;color:var(--muted);margin-bottom:.8rem">No timeline events added yet.</p>';
+}
+
+function addEditTimeline() {
+  invEditData.timeline = invEditData.timeline || { items: [] };
+  invEditData.timeline.items = invEditData.timeline.items || [];
+  invEditData.timeline.items.push({ time: '', title: '', subtitle: '', url: '' });
+  renderEditTimeline();
+}
+
+function removeEditTimeline(i) {
+  invEditData.timeline.items.splice(i, 1);
+  renderEditTimeline();
 }
 
 function renderEditLocations() {
@@ -857,7 +911,8 @@ let glSort = { key: 'name', dir: 1 };
 // Personal link now carries the guest's NAME as a slug: /invite/charbel-nahhas
 // (falls back to the legacy token only if a slug hasn't been assigned yet).
 const guestLink = g => `${window.location.origin}/invite/${g.slug || g.token}`;
-const statusLabel = s => s === 'NotAccepted' ? 'Not Accepted' : s;
+// Display-only wording: the stored value stays "NotAccepted" (used internally and by the API).
+const statusLabel = s => s === 'NotAccepted' ? 'Declined' : s;
 
 async function loadGuestList() {
   try {
@@ -1058,7 +1113,7 @@ function exportGuestsExcel() {
   allRsvps.forEach(r => {
     rows.push([
       rsvpDisplayName(r) || '—',
-      r.response || '—',
+      responseLabel(r.response),
       r.partySize ?? 0,
       r.contactPhone || '',
       r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''

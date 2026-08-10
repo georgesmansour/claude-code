@@ -269,6 +269,8 @@
     transition: border-color .3s;
   }
   .rsvp-form input::placeholder, .rsvp-form textarea::placeholder { color: rgba(253,251,247,.7); }
+  /* Locked guest name on a personal invitation. */
+  .rsvp-form input[readonly] { opacity: .85; cursor: default; border-bottom-style: dashed; }
   .rsvp-form select option { color: var(--text-main); background: var(--bg-color); }
   .rsvp-form input:focus, .rsvp-form select:focus, .rsvp-form textarea:focus { outline: none; border-color: var(--accent); }
   .rsvp-form textarea { resize: none; }
@@ -459,15 +461,21 @@ function monogramOf(names) {
 }
 
 function renderHero(c) {
-  const media = c.image || '';
-  const isVideo = /\.(mp4|webm)(\?|$)/i.test(media);
+  const image = mediaSrc(c.image || '');
+  // Prefer the dedicated cover video field. Older invitations sometimes stored a video in
+  // `image`; detect those by extension. (Uploaded media has NO extension — /api/public/media/<id>
+  // — which is why extension-sniffing alone used to miss every uploaded video.)
+  const legacyVideo = /\.(mp4|webm|ogg)(\?|$)/i.test(image) ? image : '';
+  const video = mediaSrc(c.video || '') || legacyVideo;
+  const bgImage = video === image ? '' : image;   // don't reuse the video URL as a background
   const names = esc(c.names || '');
   const heartNames = names.includes('&amp;')
     ? names.split('&amp;').map(s => s.trim()).join(' <span class="heart">❤</span> ')
     : names;
   return `
-  <section class="hero" ${media && !isVideo ? `style="background-image:url('${esc(media)}')"` : ''}>
-    ${isVideo ? `<video class="hero-media" autoplay loop muted playsinline><source src="${esc(media)}"></video>` : ''}
+  <section class="hero" ${bgImage && !video ? `style="background-image:url('${esc(bgImage)}')"` : ''}>
+    ${video ? `<video class="hero-media" data-bg-video autoplay loop muted playsinline preload="metadata"
+       ${bgImage ? `poster="${esc(bgImage)}"` : ''} src="${esc(video)}"></video>` : ''}
     <div class="hero-content">
       <div class="monogram">${esc(monogramOf(c.names))}</div>
       <div class="hero-names">${heartNames}</div>
@@ -626,7 +634,11 @@ function renderRsvp(r, maxPeople, guestName) {
         <p class="invite-max">Number of invitees: ${maxPeople}</p>` : ''}
       </div>
       <form class="rsvp-form" data-rsvp>
-        ${guestName ? '' : `<input type="text" data-guest-name placeholder="Your name(s)" style="text-align:center;">`}
+        ${guestName
+          // Personal link: show the name for confirmation but keep it locked. The server also
+          // ignores any submitted name for a known guest.
+          ? `<input type="text" data-guest-name value="${esc(guestName)}" readonly aria-readonly="true" tabindex="-1" style="text-align:center;">`
+          : `<input type="text" data-guest-name placeholder="Your name(s)" style="text-align:center;">`}
         <div class="att-radios">
           <label><input type="radio" name="attending" value="yes"> Joyfully Accept</label>
           <label><input type="radio" name="attending" value="no"> Regretfully Decline</label>
@@ -661,7 +673,20 @@ function build(data) {
   document.getElementById('main').innerHTML = parts.join('');
   document.title = (data.title || (data.cover && data.cover.names) || 'Invitation') + ' — Wedding Invitation';
 
+  startBackgroundVideos();
   if (window.InvitationMusic) InvitationMusic.init(data.music, API_BASE);
+}
+
+// A <video> injected via innerHTML doesn't always pick up the muted PROPERTY from its attribute,
+// and browsers refuse autoplay for anything not muted. Set it explicitly, then start playback —
+// a rejection (e.g. iOS Low Power Mode) is fine: the poster image remains visible.
+function startBackgroundVideos() {
+  document.querySelectorAll('[data-bg-video]').forEach(v => {
+    v.muted = true;
+    v.defaultMuted = true;
+    const p = v.play();
+    if (p && p.catch) p.catch(() => {});
+  });
 }
 
 // ── MUSIC ──────────────────────────────────────────────

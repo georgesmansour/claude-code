@@ -112,7 +112,10 @@
       timeline:  { enabled: true, label: 'The day', title: 'Wedding Timeline', items: TIMELINE },
       gifts:     GIFTS,
       rsvp:      RSVP,
-      memories:  { enabled: true, title: 'Share Your Memories', description: 'During or after the celebration, upload your photos so we can relive the day through your eyes.', url: 'https://example.com/album', buttonText: 'Share Memories' },
+      // Photo sharing is not built yet, so the demo must not advertise it. Set enabled back to
+      // true (here and in the Serene Beige demo below) once the feature ships — the templates
+      // already know how to render this section.
+      memories:  { enabled: false, title: 'Share Your Memories', description: 'During or after the celebration, upload your photos so we can relive the day through your eyes.', url: 'https://example.com/album', buttonText: 'Share Memories' },
       music:     MUSIC,
       customSections: [
         { enabled: true, label: '1 Corinthians 13:4', title: '', body: 'Love is patient, love is kind.\nIt always protects, always trusts,\nalways hopes, always perseveres.' }
@@ -134,7 +137,8 @@
       gallery:   { enabled: true, label: '', title: 'Captured Moments', items: GALLERY },
       gifts:     GIFTS,
       rsvp:      Object.assign({}, RSVP, { label: 'Be our guest', title: 'RSVP', buttonText: 'Send Response' }),
-      memories:  { enabled: true, title: 'Share Your Memories', description: 'Upload your photos from the day so we can relive it through your eyes.', url: 'https://example.com/album', buttonText: 'Share Memories' },
+      // Disabled until photo sharing is implemented — see the note on the Elegant Noir demo above.
+      memories:  { enabled: false, title: 'Share Your Memories', description: 'Upload your photos from the day so we can relive it through your eyes.', url: 'https://example.com/album', buttonText: 'Share Memories' },
       music:     MUSIC,
       customSections: []
     }

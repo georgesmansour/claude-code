@@ -2,6 +2,7 @@ using Scalar.AspNetCore;
 using System.Security.Cryptography;
 using System.Text;
 using InvitationPlatform.Api.Auth;
+using InvitationPlatform.Api.Services.Email;
 using InvitationPlatform.Api.Services.Media;
 using InvitationPlatform.Api.Services.Seeding;
 using InvitationPlatform.Api.Services.Storage;
@@ -103,6 +104,11 @@ builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("Sto
 builder.Services.Configure<MediaOptions>(builder.Configuration.GetSection("Media"));
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.AddScoped<MediaService>();
+
+// ── Email (landing-page demo requests) ───────────────────────────────
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
+builder.Services.AddHttpClient();                 // used to fetch OAuth2 tokens
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 
 // ── Seeding (Super Admin credentials from config via the Options pattern) ─────
 builder.Services.Configure<SuperAdminSettings>(builder.Configuration.GetSection("SuperAdmin"));

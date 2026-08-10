@@ -82,8 +82,11 @@ h1, h2, h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 400
 .brand-name { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; color: var(--ink); line-height: 1; }
 .brand-name small { display: block; font-family: 'Jost', sans-serif; font-size: .54rem; letter-spacing: .28em; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
 .nav-links { display: flex; align-items: center; gap: 1.6rem; }
-.nav-links a { text-decoration: none; font-size: .78rem; letter-spacing: .08em; color: var(--ink-soft); transition: color .2s; }
-.nav-links a:hover { color: var(--gold); }
+/* Exclude buttons: `.nav-links a` is more specific than `.btn-primary`, so without :not(.btn)
+   it repainted the dark "Request a Demo" button with dark text, making it unreadable. */
+.nav-links a:not(.btn) { text-decoration: none; font-size: .78rem; letter-spacing: .08em; color: var(--ink-soft); transition: color .2s; }
+.nav-links a:not(.btn):hover { color: var(--gold); }
+.nav-links a.btn { text-decoration: none; }
 .nav-toggle { display: none; background: none; border: 0; cursor: pointer; padding: .4rem; color: var(--ink); }
 
 /* ── Hero ── */

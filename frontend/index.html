@@ -302,10 +302,14 @@
             </div>
           </div>
           <div class="field">
+            <label for="cf-company">Company / Organisation <span style="opacity:.55">(optional)</span></label>
+            <input type="text" id="cf-company" name="company" autocomplete="organization">
+          </div>
+          <div class="field">
             <label for="cf-msg">Tell us about your event</label>
             <textarea id="cf-msg" name="message" placeholder="Date, venue, roughly how many guests…"></textarea>
           </div>
-          <button class="btn btn-primary" type="submit">Send Enquiry</button>
+          <button class="btn btn-primary" type="submit" id="cfSubmit">Send Request</button>
           <p class="form-note" id="cfNote">We reply within one business day. Please include an email or a phone number.</p>
         </form>
 
@@ -531,25 +535,44 @@ function renderContact(s) {
 })();
 
 // ── Contact form ─────────────────────────────────────────────────────────────
-// No backend endpoint exists for enquiries yet, so the form validates and then hands off
-// to the mail client. Swap this for a POST once a contact endpoint is added.
-document.getElementById('contactForm').addEventListener('submit', e => {
+// Posts the enquiry to our own API, which stores it and emails the address configured in
+// Admin → Landing Page Contact Details. No mail client is ever opened.
+document.getElementById('contactForm').addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.target;
   const note = document.getElementById('cfNote');
+  const btn = document.getElementById('cfSubmit');
   const name = f.name.value.trim(), email = f.email.value.trim(), phone = f.phone.value.trim();
+
+  // Client-side checks are a courtesy; the API validates independently.
   if (!name)            { note.textContent = 'Please tell us your name.'; return; }
   if (!email && !phone) { note.textContent = 'Please leave an email address or a phone number so we can reply.'; return; }
 
-  const body = encodeURIComponent(
-    `Name: ${name}\nEvent: ${f.eventType.value}\nEmail: ${email}\nPhone: ${phone}\n\n${f.message.value.trim()}`
-  );
-  if (!CONTACT.companyEmail) {
-    note.textContent = 'Our contact email is not published yet — please try again shortly.';
-    return;
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Sending…';
+  note.textContent = 'Sending your request…';
+  try {
+    const base = (window.API_BASE || '').replace(/\/$/, '');
+    const res = await fetch(`${base}/api/public/demo-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        name, eventType: f.eventType.value, email, phone,
+        company: f.company.value.trim(), message: f.message.value.trim()
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      note.textContent = data.error || 'Something went wrong. Please try again.';
+      return;
+    }
+    f.reset();
+    note.textContent = 'Thank you — your request has been sent. We reply within one business day.';
+  } catch {
+    note.textContent = 'Network error. Please check your connection and try again.';
+  } finally {
+    btn.disabled = false; btn.textContent = original;
   }
-  note.textContent = 'Opening your email app…';
-  window.location.href = `mailto:${CONTACT.companyEmail}?subject=${encodeURIComponent('Demo request — ' + f.eventType.value)}&body=${body}`;
 });
 
 function legalNote(e) {

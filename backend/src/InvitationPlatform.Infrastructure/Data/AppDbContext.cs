@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RsvpGuest>          RsvpGuests          { get; set; }
     public DbSet<NotificationSetting> NotificationSettings { get; set; }
     public DbSet<LandingSettings>    LandingSettings     { get; set; }
+    public DbSet<DemoRequest>        DemoRequests        { get; set; }
     public DbSet<AuditLog>           AuditLog            { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

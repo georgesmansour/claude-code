@@ -565,3 +565,84 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+-- Template event category (Wedding, Birthday, ...). Drives the admin filter and the
+-- /templates/<category>/<name>/ folder used to render an invitation.
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260801175335_AddTemplateEventType') THEN
+    ALTER TABLE templates ADD event_type character varying(64) NOT NULL DEFAULT 'Wedding';
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260801175335_AddTemplateEventType', '10.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+-- Public contact details for the landing page, editable from the admin panel. Kept separate from
+-- system_settings (which holds the JWT signing key) so a public endpoint can never expose a secret.
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260803170700_AddLandingSettings') THEN
+    CREATE TABLE landing_settings (
+        id uuid NOT NULL DEFAULT (gen_random_uuid()),
+        company_email character varying(256),
+        phone_number character varying(64),
+        whatsapp_number character varying(64),
+        company_address character varying(512),
+        instagram_url character varying(512),
+        facebook_url character varying(512),
+        tiktok_url character varying(512),
+        pinterest_url character varying(512),
+        map_embed_url character varying(1024),
+        updated_at timestamp with time zone NOT NULL DEFAULT (now()),
+        CONSTRAINT "PK_landing_settings" PRIMARY KEY (id)
+    );
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260803170700_AddLandingSettings', '10.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+-- "Request a Demo" enquiries from the landing page. Saved before the notification email is
+-- attempted, so a mail outage never loses a lead; email_sent_at / email_error record the outcome.
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260808115015_AddDemoRequests') THEN
+    CREATE TABLE demo_requests (
+        id uuid NOT NULL DEFAULT (gen_random_uuid()),
+        name character varying(256) NOT NULL,
+        event_type character varying(64),
+        email character varying(256),
+        phone character varying(64),
+        company character varying(256),
+        message character varying(4000),
+        read_at timestamp with time zone,
+        email_sent_at timestamp with time zone,
+        email_error character varying(1024),
+        ip_address character varying(64),
+        created_at timestamp with time zone NOT NULL DEFAULT (now()),
+        CONSTRAINT "PK_demo_requests" PRIMARY KEY (id)
+    );
+    CREATE INDEX "IX_demo_requests_created_at" ON demo_requests (created_at);
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260808115015_AddDemoRequests', '10.0.0');
+    END IF;
+END $EF$;
+
+-- read_at is created inline above, so here we only RECORD its migration as applied — otherwise
+-- EF would try to ADD the column again on the next boot and fail.
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260809121215_AddDemoRequestReadAt') THEN
+    ALTER TABLE demo_requests ADD COLUMN IF NOT EXISTS read_at timestamp with time zone;
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260809121215_AddDemoRequestReadAt', '10.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+

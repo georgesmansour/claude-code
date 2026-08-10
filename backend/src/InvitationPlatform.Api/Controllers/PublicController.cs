@@ -1,5 +1,6 @@
 using InvitationPlatform.Api.Dtos;
 using InvitationPlatform.Api.Services;
+using InvitationPlatform.Api.Services.Email;
 using InvitationPlatform.Api.Services.Media;
 using InvitationPlatform.Domain.Entities;
 using InvitationPlatform.Domain.Enums;
@@ -7,6 +8,7 @@ using InvitationPlatform.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace InvitationPlatform.Api.Controllers;
 
@@ -15,6 +17,89 @@ namespace InvitationPlatform.Api.Controllers;
 [AllowAnonymous]
 public class PublicController(AppDbContext db, MediaService media) : ControllerBase
 {
+    /// <summary>
+    /// Receives a "Request a Demo" enquiry from the landing page and emails it to the address
+    /// configured in Admin → Landing Page Contact Details.
+    ///
+    /// The enquiry is saved first and the email attempted second, so a mail outage degrades to
+    /// "recorded but not emailed" rather than losing the lead. The visitor gets a success response
+    /// as soon as the enquiry is safely stored — they should never see our mail problems.
+    /// </summary>
+    [HttpPost("demo-request")]
+    public async Task<IActionResult> SubmitDemoRequest(
+        [FromBody] DemoRequestSubmission req, [FromServices] IEmailSender email,
+        [FromServices] IOptions<SmtpOptions> smtp, CancellationToken ct)
+    {
+        var name    = req.Name?.Trim();
+        var mail    = ContactHelper.NormalizeEmail(req.Email);
+        var phone   = req.Phone?.Trim();
+        var company = req.Company?.Trim();
+        var message = req.Message?.Trim();
+        var evt     = req.EventType?.Trim();
+
+        // Server-side validation — the browser form is a convenience, not a guarantee.
+        if (string.IsNullOrWhiteSpace(name))
+            return BadRequest(new { error = "Please tell us your name." });
+        if (name.Length > 256)
+            return BadRequest(new { error = "Name is too long." });
+        if (mail is null && string.IsNullOrWhiteSpace(phone))
+            return BadRequest(new { error = "Please leave an email address or a phone number so we can reply." });
+        if (mail is not null && !ContactHelper.IsValidEmail(mail))
+            return BadRequest(new { error = "Please enter a valid email address." });
+        if (message is { Length: > 4000 })
+            return BadRequest(new { error = "Message is too long." });
+
+        var entity = new DemoRequest
+        {
+            Name = name,
+            EventType = evt,
+            Email = mail,
+            Phone = phone,
+            Company = company,
+            Message = message,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        };
+        db.DemoRequests.Add(entity);
+        await db.SaveChangesAsync(ct);
+
+        // Prefer the dedicated internal inbox; only fall back to the public contact address if no
+        // notification recipient was configured. The enquiry is already saved either way — the
+        // admin panel shows it as unread regardless of whether email is set up at all.
+        var settings = await db.LandingSettings.OrderBy(x => x.UpdatedAt).FirstOrDefaultAsync(ct);
+        var recipient = ContactHelper.NormalizeEmail(smtp.Value.NotificationRecipient)
+                        ?? ContactHelper.NormalizeEmail(settings?.CompanyEmail);
+
+        if (!email.IsConfigured)
+            entity.EmailError = "Email notifications are not configured; the request is available in the admin panel.";
+        else if (recipient is null)
+            entity.EmailError = "No notification recipient is configured; the request is available in the admin panel.";
+        else
+        {
+            try
+            {
+                var body =
+                    $"New demo request from the website\n\n" +
+                    $"Name:    {name}\n" +
+                    $"Event:   {evt ?? "-"}\n" +
+                    $"Email:   {mail ?? "-"}\n" +
+                    $"Phone:   {phone ?? "-"}\n" +
+                    $"Company: {company ?? "-"}\n\n" +
+                    $"Message:\n{(string.IsNullOrWhiteSpace(message) ? "-" : message)}\n\n" +
+                    $"Received: {entity.CreatedAt:u}";
+                await email.SendAsync(recipient, $"Demo request — {name}", body, replyTo: mail, ct: ct);
+                entity.EmailSentAt = DateTime.UtcNow;
+            }
+            catch (Exception ex)
+            {
+                // Never surface mail-server details to an anonymous caller.
+                entity.EmailError = ex.Message.Length > 1000 ? ex.Message[..1000] : ex.Message;
+            }
+        }
+
+        await db.SaveChangesAsync(ct);
+        return Ok(new { ok = true });
+    }
+
     /// <summary>
     /// Contact details for the landing page. Anonymous by design — these are the values the
     /// business wants shown publicly. Blank fields are returned as null and hidden by the page.
@@ -204,9 +289,14 @@ public class PublicController(AppDbContext db, MediaService media) : ControllerB
         rsvp.PartySize = partySize;
         // Always keep a display name on the RSVP. A decline sends no per-attendee rows, so the
         // dashboard falls back to ContactName — it must never be blank when we know the guest.
-        // "??" only guards null, so trim first and treat an empty/whitespace name as missing.
+        //
+        // When the RSVP arrives through a personal link the identity is OURS, not the browser's:
+        // the guest-list name always wins so a tampered request cannot re-attribute the reply to
+        // someone else. Only anonymous submissions may supply their own name.
         var submittedName = req.ContactName?.Trim();
-        rsvp.ContactName = string.IsNullOrEmpty(submittedName) ? guest?.Name : submittedName;
+        rsvp.ContactName = guest is not null
+            ? guest.Name
+            : (string.IsNullOrEmpty(submittedName) ? null : submittedName);
         rsvp.ContactEmail = req.ContactEmail;
         rsvp.ContactPhone = req.ContactPhone;
         rsvp.Message = req.Message;

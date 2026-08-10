@@ -70,6 +70,18 @@
   .badge-draft { background: rgba(255,255,255,.05); color: var(--muted); border: 1px solid rgba(255,255,255,.1); }
   .badge-published { background: rgba(110,214,138,.1); color: var(--success); border: 1px solid rgba(110,214,138,.3); }
   .badge-archived { background: rgba(217,102,102,.1); color: var(--danger); border: 1px solid rgba(217,102,102,.3); }
+  /* Unread counter on the Requests tab — the in-app notification. */
+  .tab-badge { display: inline-block; min-width: 17px; padding: 1px 5px; margin-left: 5px; border-radius: 999px;
+    background: var(--danger); color: #fff; font-size: .6rem; line-height: 1.5; text-align: center; }
+  .req-card { border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.1rem; margin-bottom: .8rem; background: rgba(255,255,255,.02); }
+  .req-card.unread { border-color: var(--gold); background: rgba(201,169,110,.07); }
+  .req-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: .5rem; }
+  .req-name { font-size: 1rem; color: var(--white); }
+  .req-when { font-size: .68rem; color: var(--muted); margin-left: auto; }
+  .req-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: .78rem; color: var(--gold-light); margin-bottom: .5rem; }
+  .req-meta a { color: var(--gold-light); }
+  .req-msg { font-size: .82rem; color: var(--text); white-space: pre-wrap; margin-top: .4rem; }
+  .req-warn { font-size: .68rem; color: var(--warn, #e0b96e); margin-top: .5rem; }
   .badge-template { font-size: .55rem; padding: 1px 6px; border-radius: 2px; letter-spacing: 1px; background: rgba(201,169,110,.12); color: var(--gold-light); border: 1px solid var(--border); }
   .badge-template.unassigned { background: rgba(255,255,255,.04); color: var(--muted); }
   .empty-state { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: .8rem; }
@@ -243,6 +255,7 @@
       <button class="tab active" data-tab="invitations">Invitations</button>
       <button class="tab" data-tab="templates">Templates</button>
       <button class="tab" data-tab="rsvps">RSVPs</button>
+      <button class="tab" data-tab="requests">Requests <span class="tab-badge" id="reqBadge" hidden>0</span></button>
       <button class="tab" data-tab="settings">Settings</button>
     </div>
     <div class="user">Signed in as <strong id="user-name">—</strong></div>
@@ -284,6 +297,26 @@
         </div>
         <div id="rsvp-stats" style="margin-top: 1.2rem;"></div>
         <div id="rsvp-list" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEMO REQUESTS TAB -->
+  <div id="tab-requests" class="hidden">
+    <div class="panel" style="max-width: none;">
+      <div class="block">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <h2 style="margin-bottom:0;">Demo Requests</h2>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn" onclick="sendTestEmail(this)">Send test email</button>
+            <button class="btn" onclick="markAllRequestsRead()">Mark all as read</button>
+          </div>
+        </div>
+        <p style="font-size:.8rem; color:var(--muted); margin:.6rem 0 1rem;">
+          Enquiries sent from the landing page. They appear here as soon as they are submitted —
+          no email setup required. New ones are highlighted until you open them.
+        </p>
+        <div id="requestsList"></div>
       </div>
     </div>
   </div>
@@ -535,17 +568,99 @@ async function bootApp() {
   await refreshInvitations();
   await refreshTemplates();
   populateRsvpSelect();
+  refreshRequestBadge();   // show the unread lead count as soon as the admin signs in
   window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 }
 
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  ['invitations', 'templates', 'rsvps', 'settings'].forEach(t =>
+  ['invitations', 'templates', 'rsvps', 'requests', 'settings'].forEach(t =>
     document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab));
   if (tab === 'templates') renderTemplates();
   if (tab === 'rsvps') populateRsvpSelect();
+  if (tab === 'requests') loadDemoRequests();
   if (tab === 'settings') loadLandingSettings();
+}
+
+// ════════════════════════════════════════════════════════
+// DEMO REQUESTS  (in-app notifications for landing-page leads)
+// ════════════════════════════════════════════════════════
+// This is the primary way new enquiries reach the admin: they show up here regardless of whether
+// email is configured, so nothing has to be published in the public contact settings.
+let demoRequests = [];
+
+async function refreshRequestBadge() {
+  try {
+    const res = await api('GET', '/api/admin/demo-requests');
+    demoRequests = res.items || [];
+    const badge = document.getElementById('reqBadge');
+    if (badge) {
+      badge.textContent = res.unread;
+      badge.hidden = !res.unread;
+    }
+  } catch { /* badge is best-effort; never block the admin UI */ }
+}
+
+async function loadDemoRequests() {
+  await refreshRequestBadge();
+  renderDemoRequests();
+}
+
+function renderDemoRequests() {
+  const c = document.getElementById('requestsList');
+  if (!c) return;
+  if (!demoRequests.length) {
+    c.innerHTML = '<div class="empty-state">No demo requests yet.</div>';
+    return;
+  }
+  c.innerHTML = demoRequests.map(r => {
+    const unread = !r.readAt;
+    const when = r.createdAt ? new Date(r.createdAt).toLocaleString() : '';
+    const contact = [
+      r.email ? `<a href="mailto:${esc(r.email)}">${esc(r.email)}</a>` : '',
+      r.phone ? `<a href="tel:${esc(r.phone.replace(/[^\d+]/g, ''))}">${esc(r.phone)}</a>` : '',
+      r.company ? esc(r.company) : ''
+    ].filter(Boolean).join('');
+    return `<div class="req-card ${unread ? 'unread' : ''}">
+      <div class="req-head">
+        <span class="req-name">${esc(r.name)}</span>
+        ${r.eventType ? `<span class="badge">${esc(r.eventType)}</span>` : ''}
+        ${unread ? '<span class="badge-status badge-published">New</span>' : ''}
+        <span class="req-when">${esc(when)}</span>
+      </div>
+      <div class="req-meta">${contact || '<span style="color:var(--muted)">No contact details</span>'}</div>
+      ${r.message ? `<div class="req-msg">${esc(r.message)}</div>` : ''}
+      ${r.emailError ? `<div class="req-warn">⚠ Email notification not sent: ${esc(r.emailError)}</div>` : ''}
+      ${unread ? `<div style="margin-top:.7rem;"><button class="btn btn-sm" onclick="markRequestRead('${esc(r.id)}')">Mark as read</button></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function markRequestRead(id) {
+  try { await api('POST', `/api/admin/demo-requests/${id}/read`); await loadDemoRequests(); }
+  catch (e) { toast(e.message, 'error'); }
+}
+
+// Verifies the SMTP configuration end-to-end without waiting for a real enquiry. The server
+// returns the provider's own error text, which is what makes an auth problem diagnosable.
+async function sendTestEmail(btn) {
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const res = await api('POST', '/api/admin/demo-requests/test-email');
+    toast(`Test email sent to ${res.sentTo}`, 'success');
+  } catch (e) {
+    toast(e.message, 'error');
+    alert('Test email failed:\n\n' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = original;
+  }
+}
+
+async function markAllRequestsRead() {
+  try { await api('POST', '/api/admin/demo-requests/read-all'); await loadDemoRequests(); }
+  catch (e) { toast(e.message, 'error'); }
 }
 
 // ════════════════════════════════════════════════════════
@@ -1581,6 +1696,12 @@ function renderTemplates() {
     </div>`).join('') || `<div class="empty-state" style="grid-column:1/-1;">${templates.length ? 'No templates for this event type.' : 'No templates yet.'}</div>`;
 }
 
+// Display-only wording for an RSVP answer ("No" reads as "Declined"); stored values are unchanged.
+function responseLabel(v) {
+  const s = (v || '').toLowerCase();
+  return s === 'yes' ? 'Accepted' : s === 'no' ? 'Declined' : (v || '—');
+}
+
 function countSections(d) {
   let n = 0;
   ['cover','countdown','locations','gifts','rsvp'].forEach(k => { if (d?.[k] && d[k].enabled !== false) n++; });
@@ -1653,7 +1774,7 @@ async function loadRsvps() {
           ${rsvps.map(r => `
             <tr>
               <td>${new Date(r.createdAt).toLocaleString()}</td>
-              <td><span class="badge">${esc(r.response)}</span></td>
+              <td><span class="badge">${esc(responseLabel(r.response))}</span></td>
               <td>${r.partySize}</td>
               <td>${(r.guests || []).map(g => esc(g.fullName)).join(', ') || (r.contactName ? esc(r.contactName) : '—')}</td>
               <td>${esc(r.contactPhone || '—')}</td>
@@ -1670,7 +1791,7 @@ function exportRsvpExcel() {
   const rows = [['Response', 'Party Size', 'Guests', 'Phone', 'Date']];
   currentRsvps.forEach(r => {
     rows.push([
-      r.response,
+      responseLabel(r.response),
       r.partySize,
       (r.guests || []).map(g => g.fullName).join(', ') || r.contactName || '',
       r.contactPhone || '',

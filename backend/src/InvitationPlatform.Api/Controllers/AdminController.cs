@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using InvitationPlatform.Api.Dtos;
 using InvitationPlatform.Api.Services;
+using InvitationPlatform.Api.Services.Email;
 using InvitationPlatform.Domain.Entities;
 using InvitationPlatform.Domain.Enums;
 using InvitationPlatform.Infrastructure.Data;
@@ -332,6 +333,77 @@ public class AdminController(AppDbContext db) : ControllerBase
         LandingSettingsMapper.Apply(s, req);
         await db.SaveChangesAsync(ct);
         return Ok(LandingSettingsMapper.ToDto(s));
+    }
+
+    /// <summary>
+    /// Landing-page demo enquiries. This is the primary notification channel: new leads show up
+    /// here (with an unread count) whether or not email delivery is configured or working.
+    /// </summary>
+    [HttpGet("demo-requests")]
+    public async Task<IActionResult> ListDemoRequests(CancellationToken ct)
+    {
+        var rows = await db.DemoRequests
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(100)
+            .Select(r => new DemoRequestDto(
+                r.Id, r.Name, r.EventType, r.Email, r.Phone, r.Company,
+                r.Message, r.ReadAt, r.EmailSentAt, r.EmailError, r.CreatedAt))
+            .ToListAsync(ct);
+        return Ok(new { unread = rows.Count(r => r.ReadAt is null), items = rows });
+    }
+
+    /// <summary>
+    /// Sends a test email to the configured notification inbox so SMTP settings can be verified
+    /// without waiting for a real enquiry. Returns the provider's error verbatim when it fails,
+    /// which is what makes an auth misconfiguration diagnosable.
+    /// </summary>
+    [HttpPost("demo-requests/test-email")]
+    public async Task<IActionResult> SendTestEmail(
+        [FromServices] IEmailSender email,
+        [FromServices] Microsoft.Extensions.Options.IOptions<SmtpOptions> smtp,
+        CancellationToken ct)
+    {
+        if (!email.IsConfigured)
+            return BadRequest(new { error = "SMTP is not configured (Smtp:Host is empty)." });
+
+        var settings = await db.LandingSettings.OrderBy(x => x.UpdatedAt).FirstOrDefaultAsync(ct);
+        var recipient = ContactHelper.NormalizeEmail(smtp.Value.NotificationRecipient)
+                        ?? ContactHelper.NormalizeEmail(settings?.CompanyEmail);
+        if (recipient is null)
+            return BadRequest(new { error = "No notification recipient is configured." });
+
+        try
+        {
+            await email.SendAsync(recipient, "Test email — Invitation Platform",
+                "This is a test message. If you received it, demo-request notifications are working.",
+                ct: ct);
+            return Ok(new { ok = true, sentTo = recipient });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>Marks one enquiry as read (clears it from the unread badge).</summary>
+    [HttpPost("demo-requests/{id:guid}/read")]
+    public async Task<IActionResult> MarkDemoRequestRead(Guid id, CancellationToken ct)
+    {
+        var row = await db.DemoRequests.FirstOrDefaultAsync(r => r.Id == id, ct);
+        if (row is null) return NotFound(new { error = "Request not found" });
+        row.ReadAt ??= DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return Ok(new { ok = true });
+    }
+
+    /// <summary>Marks every outstanding enquiry as read.</summary>
+    [HttpPost("demo-requests/read-all")]
+    public async Task<IActionResult> MarkAllDemoRequestsRead(CancellationToken ct)
+    {
+        var unread = await db.DemoRequests.Where(r => r.ReadAt == null).ToListAsync(ct);
+        foreach (var r in unread) r.ReadAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return Ok(new { ok = true, cleared = unread.Count });
     }
 
     private static string RandomHex(int bytes)

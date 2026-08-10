@@ -92,6 +92,54 @@ public class RsvpContactNameTests
     }
 
     [Fact]
+    public async Task Guest_cannot_rename_themselves_on_a_personal_link()
+    {
+        // Someone editing the request (or the DOM) must not be able to re-attribute the reply:
+        // for a known guest the guest-list name always wins over whatever the browser sent.
+        using var db = TestSupport.NewDb();
+        var inv = TestSupport.SeedInvitation(db);
+        TestSupport.SeedGuest(db, inv.Id, "John Doe", "john-doe", token: "tok-1");
+        var ctrl = TestSupport.NewPublicController(db);
+
+        await ctrl.SubmitRsvp(inv.Slug, new SubmitRsvpRequest(
+            "yes", 1, "Somebody Else", null, null, null,
+            new List<RsvpGuestRequest>(), "john-doe"));
+
+        var rsvp = await db.Rsvps.SingleAsync();
+        Assert.Equal("John Doe", rsvp.ContactName);
+    }
+
+    [Fact]
+    public async Task Guest_cannot_rename_themselves_when_declining()
+    {
+        using var db = TestSupport.NewDb();
+        var inv = TestSupport.SeedInvitation(db);
+        TestSupport.SeedGuest(db, inv.Id, "John Doe", "john-doe", token: "tok-1");
+        var ctrl = TestSupport.NewPublicController(db);
+
+        await ctrl.SubmitRsvp(inv.Slug, Decline("Somebody Else", "john-doe"));
+
+        var rsvp = await db.Rsvps.SingleAsync();
+        Assert.Equal("John Doe", rsvp.ContactName);
+    }
+
+    [Fact]
+    public async Task Anonymous_submission_may_still_supply_its_own_name()
+    {
+        // The lock only applies to personal links; an open invitation has no guest to trust.
+        using var db = TestSupport.NewDb();
+        var inv = TestSupport.SeedInvitation(db);
+        var ctrl = TestSupport.NewPublicController(db);
+
+        await ctrl.SubmitRsvp(inv.Slug, new SubmitRsvpRequest(
+            "yes", 1, "Walk-in Guest", null, null, null,
+            new List<RsvpGuestRequest>(), GuestToken: null));
+
+        var rsvp = await db.Rsvps.SingleAsync();
+        Assert.Equal("Walk-in Guest", rsvp.ContactName);
+    }
+
+    [Fact]
     public async Task Accept_then_decline_reuses_one_record_and_keeps_name()
     {
         // Re-submitting overwrites the same RSVP; the name must survive the accept→decline flip.
