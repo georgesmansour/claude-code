@@ -1,0 +1,22 @@
+# Edge server for production: terminates TLS and forwards everything to the web container.
+#
+# SITE_ADDRESS comes from .env and decides the mode:
+#   :80                      → plain HTTP on the server's IP. Use before a domain is pointed.
+#   invitations.example.com  → Caddy obtains and renews a Let's Encrypt certificate itself.
+#
+# Switching from one to the other is a .env edit plus "docker compose restart caddy" —
+# no certificate files to manage, no certbot cron.
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# All routing (static files, /api proxy, /invite rewrites) lives in the web container's
+	# nginx.conf, so it stays identical between local development and production. Caddy is
+	# deliberately only the TLS edge — it does not duplicate any of those rules.
+	reverse_proxy web:80
+
+	log {
+		output stdout
+		format console
+	}
+}

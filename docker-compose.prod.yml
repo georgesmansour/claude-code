@@ -1,0 +1,117 @@
+# Production stack — four containers, one private network.
+#
+#   caddy  →  the ONLY container with published ports. Terminates TLS.
+#   web    →  nginx: static site + /api proxy + URL rewrites
+#   api    →  ASP.NET Core
+#   db     →  PostgreSQL, on the server's disk
+#
+# Deliberately a standalone file rather than an override of docker-compose.yml: on a server
+# you want one file that says exactly what runs, with no mental merge step.
+#
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# Full walkthrough: backend/docs/DEPLOY.md
+
+name: invitation-platform
+
+services:
+  # ── TLS edge ───────────────────────────────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: invitation-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"        # HTTP/3
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env (":80" until a domain is pointed)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and account keys. Losing this volume means re-issuing certificates,
+      # and Let's Encrypt rate-limits that — so never "docker compose down -v" in production.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  # ── Static site + routing ──────────────────────────────────────────────────
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: invitation-platform/web:local
+    container_name: invitation-web
+    # "expose", not "ports": reachable by caddy on the internal network, never from outside.
+    expose:
+      - "80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Backend ────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: invitation-platform/api:local
+    container_name: invitation-api
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Storage__BasePath: /app/media_storage
+      Jwt__Issuer: InvitationPlatform
+      Jwt__Audience: InvitationPlatform
+      Jwt__ExpiryMinutes: "60"
+      Media__MaxImageBytes: "8388608"
+      Media__MaxVideoBytes: "15728640"
+      Media__MaxAudioBytes: "10485760"
+      Media__MaxImageDimension: "2000"
+      Media__WebpQuality: "80"
+      # Quieter than local: Warning-level default keeps the journal small on a small disk.
+      Logging__LogLevel__Default: Warning
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
+      Logging__LogLevel__InvitationPlatform: Information
+    expose:
+      - "8080"
+    volumes:
+      # User uploads. This is the volume that must never be lost — back it up.
+      - api_media:/app/media_storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Database ───────────────────────────────────────────────────────────────
+  db:
+    image: postgres:18-alpine
+    container_name: invitation-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-invitationplatform}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      # /var/lib/postgresql, NOT /var/lib/postgresql/data — postgres:18+ moved the data
+      # directory into a version subdirectory. The old path leaves the volume unused and the
+      # container restart-loops. This is also the layout pg_upgrade expects.
+      - db_data:/var/lib/postgresql
+    # No "ports". The database is reachable only from the api container. To run psql or
+    # pgAdmin against it, tunnel over SSH rather than opening 5432 to the internet:
+    #   ssh -L 5432:localhost:5432 user@server
+    #   docker compose -f docker-compose.prod.yml exec db psql -U <user> -d <db>
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  api_media:
+  db_data:
+  caddy_data:
+  caddy_config:

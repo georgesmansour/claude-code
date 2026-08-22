@@ -1,0 +1,45 @@
+# Keep the build context small and reproducible. Anything listed here is never
+# sent to the Docker daemon, so a stale local bin/ can't leak into the image.
+#
+# IMPORTANT: patterns are matched against paths relative to the CONTEXT ROOT and are NOT
+# recursive. A bare "appsettings.json" matches ONLY ./appsettings.json — it does not match
+# src/InvitationPlatform.Api/appsettings.json. Anything that can appear at any depth needs
+# an explicit "**/" prefix, which is why every entry below is written that way.
+bin/
+obj/
+out/
+**/bin/
+**/obj/
+**/out/
+
+# Local IDE / user state
+.vs/
+.vscode/
+.idea/
+**/*.user
+**/*.suo
+
+# Never bake secrets or user content into an image.
+#
+# appsettings.json is excluded deliberately: developers fill their local copy with real
+# credentials, and anything copied into a layer stays in the image even if a later layer
+# deletes it. The container is configured entirely through environment variables instead
+# (docker-compose.yml + .env), so the image is safe to push anywhere.
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/appsettings.*.local.json
+**/*.pfx
+**/*.key
+**/secrets.json
+media_storage/
+**/media_storage/
+
+# Not needed at build time
+tests/
+db/
+docs/
+Dockerfile
+.dockerignore
+**/*.log
+logs/

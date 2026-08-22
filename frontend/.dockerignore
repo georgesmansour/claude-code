@@ -1,0 +1,9 @@
+# Everything else in this folder IS the website, so only local editor noise is excluded.
+#
+# Note: Dockerfile and nginx.conf are deliberately NOT listed — the build needs them in the
+# context. The Dockerfile's staging stage removes them from the web root instead.
+.vscode/
+.idea/
+*.log
+.DS_Store
+Thumbs.db

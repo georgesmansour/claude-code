@@ -1,0 +1,113 @@
+# Invitation Platform — local container stack.
+#
+#   web  →  nginx serving frontend/ and proxying /api/* to the api container
+#   api  →  ASP.NET Core backend
+#   db   →  PostgreSQL, matching production so local testing exercises the real path
+#
+# Everything secret comes from .env (gitignored). Copy .env.example to .env first.
+#
+#   docker compose up --build -d      start
+#   docker compose logs -f api        follow the API log
+#   docker compose down               stop (keeps the media volume)
+
+name: invitation-platform
+
+services:
+  # ── Backend ────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: invitation-platform/api:local
+    container_name: invitation-api
+    # Secrets and anything environment-specific: connection string, super admin, SMTP.
+    env_file:
+      - .env
+    environment:
+      # The image ships without appsettings.json on purpose (see backend/.dockerignore),
+      # so the non-secret settings that file used to hold are declared here instead.
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Storage__BasePath: /app/media_storage
+      Jwt__Issuer: InvitationPlatform
+      Jwt__Audience: InvitationPlatform
+      Jwt__ExpiryMinutes: "60"
+      Media__MaxImageBytes: "8388608"
+      Media__MaxVideoBytes: "15728640"
+      Media__MaxAudioBytes: "10485760"
+      Media__MaxImageDimension: "2000"
+      Media__WebpQuality: "80"
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
+      Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command: Warning
+    ports:
+      # Not needed by the web container (it reaches the API over the internal network) and
+      # nothing in the frontend targets it — config.js resolves the API same-origin.
+      #
+      # 5035, NOT 5034: Visual Studio's launch profiles bind 5034, so publishing the container
+      # there means F5 fails with "address already in use" whenever the stack is running.
+      # Leaving 5034 to Visual Studio lets the container stack and a debugger run side by side.
+      - "5035:8080"
+    volumes:
+      # Uploaded media must outlive the container — without this, every rebuild
+      # wipes user uploads.
+      - api_media:/app/media_storage
+    depends_on:
+      db:
+        # Waits for pg_isready, not merely for the container to start — otherwise the API
+        # races Postgres on boot. Mirrors the ordering used in production.
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Frontend ───────────────────────────────────────────────────────────────
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: invitation-platform/web:local
+    container_name: invitation-web
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        # Wait for the API's /health to pass, not merely for the process to start:
+        # EF migrations and seeding run before it listens, so "healthy" means ready.
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Database ───────────────────────────────────────────────────────────────
+  # The same postgres image and the same startup ordering as production, so what you test
+  # here is what you deploy. Migrations and seeding run on boot, so an empty volume becomes
+  # a fully provisioned database by itself — no schema.sql import.
+  db:
+    image: postgres:18-alpine
+    container_name: invitation-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-invitationplatform}
+      POSTGRES_USER: ${POSTGRES_USER:-invitation}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    ports:
+      # Local convenience only — lets you attach pgAdmin or psql from Windows.
+      # Production deliberately publishes NO database port; see docker-compose.prod.yml.
+      #
+      # 5433 on the host, NOT 5432: a PostgreSQL installed natively on Windows takes 5432,
+      # and two services cannot share it. Leaving 5432 to the native install lets both run.
+      # Inside the compose network this container is still reached as db:5432.
+      - "5433:5432"
+    volumes:
+      # /var/lib/postgresql, NOT /var/lib/postgresql/data — the postgres:18+ images moved the
+      # data directory into a version-specific subdirectory so that pg_upgrade can work across
+      # a single mount. Mounting the old path leaves the volume unused and the container
+      # restart-loops with "PostgreSQL data in ... (unused mount/volume)".
+      - db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  api_media:
+  db_data:
