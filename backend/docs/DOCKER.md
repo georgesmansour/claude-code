@@ -222,6 +222,32 @@ git pull && docker compose -f docker-compose.prod.yml up --build -d
 
 Take a database backup first — this project has no down-migration path.
 
+### Rehearsing the production stack on your PC
+
+The production stack runs locally too, which is how you test a deployment before touching a
+server. It uses a **different compose project name** (`invitation-platform-prod`) and different
+container names, so it does not disturb the local stack — both can run at once.
+
+```bash
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+With `SITE_ADDRESS=:80` in `.env`, the site is served by Caddy at **http://localhost** — note
+port 80, not 8080. That exercises the full production chain: Caddy → nginx → API → Postgres.
+
+Its database and media volumes are separate (`invitation-platform-prod_*`), so it starts from an
+empty database exactly as the server will. Your local data is untouched.
+
+```bash
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs -f api
+docker compose -f docker-compose.prod.yml down
+```
+
+Two differences remain from the real server, both unavoidable locally: there is no real domain,
+so Caddy serves plain HTTP instead of requesting a certificate; and if you deploy to ARM the
+server builds for a different architecture than your PC.
+
 ### Working with the local database
 
 ```bash
