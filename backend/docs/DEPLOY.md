@@ -257,7 +257,55 @@ docker run --rm -v invitation-platform_api_media:/data -v $(pwd):/out alpine \
   tar czf /out/media-$(date +%F).tar.gz -C /data .
 ```
 
-### 4.3 Deploy an update
+### 4.3 Querying the production database
+
+The database has **no published port** — it listens only on the private compose network. That is
+deliberate: there is nothing on the server for anyone to connect to, scan, or brute-force.
+
+**The normal way** is the `psql` that already ships inside the container. Nothing to install, no
+port to open:
+
+```bash
+ssh ubuntu@your-server
+```
+
+```bash
+cd app && docker compose -f docker-compose.prod.yml exec db psql -U invitation -d invitationplatform
+```
+
+A single query without opening a session:
+
+```bash
+docker compose -f docker-compose.prod.yml exec db psql -U invitation -d invitationplatform -c "SELECT count(*) FROM invitations;"
+```
+
+**To use pgAdmin from your PC**, two steps are needed, and the tunnel alone is not one of them.
+First bind the port to the server's loopback by uncommenting this in `docker-compose.prod.yml`:
+
+```yaml
+    ports:
+      - "127.0.0.1:5432:5432"
+```
+
+then `docker compose -f docker-compose.prod.yml up -d db` and open the tunnel:
+
+```bash
+ssh -L 5432:localhost:5432 ubuntu@your-server
+```
+
+While that session is open, pgAdmin connects to `localhost:5432` on your PC and reaches the
+server's database. Close the SSH session and the route disappears.
+
+> The `127.0.0.1:` prefix is the whole security story. It binds the port to the server's own
+> loopback, reachable through SSH and from nowhere else. A bare `5432:5432` would publish your
+> production database to the internet.
+>
+> Skipping the binding and opening only the tunnel does not work: the tunnel forwards to the
+> server's `localhost:5432`, where nothing is listening until the port is bound.
+
+**Never** open 5432 in the Oracle security list or in iptables.
+
+### 4.4 Deploy an update
 
 ```bash
 git pull && docker compose -f docker-compose.prod.yml up --build -d
@@ -266,7 +314,7 @@ git pull && docker compose -f docker-compose.prod.yml up --build -d
 Migrations run automatically on boot. Take a database backup first — this project has no
 down-migration path.
 
-### 4.4 Never run `down -v` in production
+### 4.5 Never run `down -v` in production
 
 `docker compose down` is safe: it stops containers and keeps volumes. Adding `-v` destroys
 `db_data`, `api_media` *and* `caddy_data` — that is your database, your users' uploads, and

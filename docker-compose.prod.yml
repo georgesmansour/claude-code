@@ -98,10 +98,24 @@ services:
       # directory into a version subdirectory. The old path leaves the volume unused and the
       # container restart-loops. This is also the layout pg_upgrade expects.
       - db_data:/var/lib/postgresql
-    # No "ports". The database is reachable only from the api container. To run psql or
-    # pgAdmin against it, tunnel over SSH rather than opening 5432 to the internet:
-    #   ssh -L 5432:localhost:5432 user@server
+    # No "ports": the database listens only on the private compose network, so there is no
+    # port on the server for anyone to reach. To run queries, SSH in and use the psql that
+    # ships inside this container — no port and no client install needed:
+    #
     #   docker compose -f docker-compose.prod.yml exec db psql -U <user> -d <db>
+    #
+    # To drive it with pgAdmin from your PC instead, uncomment the binding below and tunnel:
+    #
+    #   ports:
+    #     - "127.0.0.1:5432:5432"
+    #
+    #   ssh -L 5432:localhost:5432 user@server      # then connect pgAdmin to localhost:5432
+    #
+    # The "127.0.0.1:" prefix is what makes that safe — it binds to the server's loopback
+    # only, so the port is reachable through an SSH session and from nowhere else. Writing
+    # it as a bare "5432:5432" would publish the database to the entire internet.
+    # An SSH tunnel alone is NOT enough while this stays commented out: the tunnel forwards
+    # to the server's localhost, where nothing is listening until the port is bound.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
