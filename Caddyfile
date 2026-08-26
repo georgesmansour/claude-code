@@ -1,18 +1,53 @@
 # Edge server for production: terminates TLS and forwards everything to the web container.
 #
 # SITE_ADDRESS comes from .env and decides the mode:
-#   :80                      → plain HTTP on the server's IP. Use before a domain is pointed.
-#   invitations.example.com  → Caddy obtains and renews a Let's Encrypt certificate itself.
+#   :80                                        → plain HTTP, for rehearsing locally
+#   digital-invite.net, www.digital-invite.net → Caddy obtains and renews Let's Encrypt
+#                                                certificates for both names itself
 #
-# Switching from one to the other is a .env edit plus "docker compose restart caddy" —
-# no certificate files to manage, no certbot cron.
+# Switching between them is a .env edit plus "docker compose restart caddy" — no certificate
+# files to manage and no certbot cron.
+{
+	# Where Let's Encrypt sends expiry and problem notices. Not required, but without it you
+	# get no warning if renewal ever starts failing.
+	email {$ACME_EMAIL:admin@digital-invite.net}
+}
 
 {$SITE_ADDRESS} {
 	encode zstd gzip
 
-	# All routing (static files, /api proxy, /invite rewrites) lives in the web container's
-	# nginx.conf, so it stays identical between local development and production. Caddy is
-	# deliberately only the TLS edge — it does not duplicate any of those rules.
+	# ── Canonical host ───────────────────────────────────────────────────────
+	# Serve one address, not two. Without this, every page is reachable at both the apex and
+	# www, which splits search ranking and makes shared invitation links inconsistent.
+	#
+	# Matching on the Host header rather than on the site address means this rule is simply
+	# inert during a local rehearsal, where SITE_ADDRESS is ":80" and no request carries that
+	# host. One Caddyfile, both modes.
+	@www host www.digital-invite.net
+	redir @www https://digital-invite.net{uri} permanent
+
+	# ── Baseline security headers ────────────────────────────────────────────
+	header {
+		# Stop browsers guessing a content type other than the one we send.
+		X-Content-Type-Options "nosniff"
+		# Invitations should never be framed by another site.
+		X-Frame-Options "SAMEORIGIN"
+		# Send the origin, not the full path, when following an outbound link — guest slugs
+		# live in the path and should not leak to Google Maps or a registry site.
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Do not advertise the server software.
+		-Server
+	}
+
+	# HSTS is deliberately left off until the certificate has been working for a while.
+	# Browsers cache it for its full max-age, so enabling it before you are confident in the
+	# TLS setup can lock visitors out of a site you cannot quickly fix. To enable later, add:
+	#   header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	# ── Application ──────────────────────────────────────────────────────────
+	# All routing — static files, the /api proxy, /invite rewrites — lives in the web
+	# container's nginx.conf, so it stays identical between local and production. Caddy is
+	# only the TLS edge and deliberately duplicates none of it.
 	reverse_proxy web:80
 
 	log {

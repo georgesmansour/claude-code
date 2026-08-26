@@ -52,14 +52,15 @@ The server deploys by cloning the repository, so everything must be committed fi
 git add -A && git commit -m "Add production Docker stack" && git push
 ```
 
-### 1.3 Decide the domain
+### 1.3 The domain
 
-You can deploy **before** buying the domain. Start with `SITE_ADDRESS=:80` and the site runs on
-the server's bare IP over plain HTTP. When the domain is registered and its A record points at
-the server, change one line in `.env` and restart Caddy — it obtains the certificate itself.
+The site is **digital-invite.net**. Caddy is configured to serve the apex and to 301 `www` to
+it, so there is one canonical address rather than two copies of every invitation link.
 
-Do not point the domain until the server answers on port 80, or Let's Encrypt validation fails
-and you burn attempts against its rate limit.
+Deploy on the bare IP first regardless. `SITE_ADDRESS=:80` runs the site over plain HTTP on the
+server's address; only switch to the domain once that works. Two reasons: a failure then has one
+cause instead of three, and Let's Encrypt validation fails if it reaches the domain before the
+server is answering — which counts against a rate limit you cannot reset.
 
 ---
 
@@ -172,27 +173,63 @@ Visit `http://<server-ip>` and log in at `/admin` with your `SuperAdmin__` crede
 
 ### 3.3 Add the domain and HTTPS
 
-Once the site answers on the IP:
+Only once the site answers on the bare IP.
 
-1. At your registrar, create an **A record** pointing your hostname at the server's public IP.
-2. Wait for it to resolve: `dig +short invitations.yourdomain.com` must return that IP.
-3. On the server, edit `.env`:
+**1 — Create both DNS records** at your registrar, pointing at the server's public IP:
+
+| Type | Name | Value |
+|------|------|-------|
+| `A` | `@` | your server's public IP |
+| `A` | `www` | your server's public IP |
+
+Both are needed. Caddy requests a certificate for **every** name in `SITE_ADDRESS`, so if `www`
+does not resolve, issuance for it fails repeatedly even though the apex works. A `CNAME` for
+`www` pointing at the apex is equally fine.
+
+**2 — Wait for DNS to propagate.** Both must return the server's IP before continuing:
 
 ```bash
-sed -i 's|^SITE_ADDRESS=.*|SITE_ADDRESS=invitations.yourdomain.com|' .env
+dig +short digital-invite.net && dig +short www.digital-invite.net
 ```
 
-4. Restart the edge:
+**3 — Switch the address** in `.env` on the server:
+
+```bash
+sed -i 's|^SITE_ADDRESS=.*|SITE_ADDRESS=digital-invite.net, www.digital-invite.net|' .env
+```
+
+**4 — Restart the edge:**
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d caddy
 ```
 
-Caddy requests the certificate within seconds and renews it automatically from then on.
-Watch it happen with `docker compose -f docker-compose.prod.yml logs -f caddy`.
+Caddy requests both certificates within seconds and renews them automatically from then on.
+Watch it: `docker compose -f docker-compose.prod.yml logs -f caddy`.
 
-5. Tighten the host filter now that a real hostname exists — set
-   `AllowedHosts=invitations.yourdomain.com` in `.env` and restart `api`.
+**5 — Verify all three behaviours:**
+
+```bash
+curl -I https://digital-invite.net
+curl -I http://digital-invite.net
+curl -I https://www.digital-invite.net
+```
+
+Expect `200`, then a `308` redirect to HTTPS (Caddy adds that automatically), then a `301` to
+the apex.
+
+**6 — Tighten the host filter** now that real hostnames exist. In `.env`:
+
+```
+AllowedHosts=digital-invite.net;www.digital-invite.net
+```
+
+Then `docker compose -f docker-compose.prod.yml up -d api`.
+
+**7 — Consider HSTS**, but not immediately. Once the certificate has been renewing cleanly for a
+week or two, uncomment the `Strict-Transport-Security` header in the `Caddyfile`. Browsers cache
+it for its full `max-age`, so enabling it early means a TLS problem locks visitors out of a site
+you cannot quickly fix.
 
 ---
 
@@ -260,7 +297,7 @@ rules for 80/443 above the REJECT rule.
 
 **Caddy cannot get a certificate.** DNS is not resolving to this server yet, or port 80 is not
 reachable from the internet — Let's Encrypt validates over HTTP. Confirm with
-`curl -I http://invitations.yourdomain.com` from somewhere other than the server.
+`curl -I http://digital-invite.net` from somewhere other than the server.
 
 **API restarting in a loop.** `docker compose -f docker-compose.prod.yml logs api`. Nearly
 always a credential mismatch between the `POSTGRES_*` variables and the connection string. The
