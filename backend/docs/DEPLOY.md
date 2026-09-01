@@ -319,8 +319,9 @@ Leave `SITE_ADDRESS=:80` for now.
 
 ### 3.2 Start it
 
-Push to `feat/docker-deployment` or `main` first, or run the **Build images** workflow by hand,
-so the images exist in GHCR. Then, on the server:
+Run the **Build images** workflow from the Actions tab, selecting `feat/docker-deployment` as
+the branch, and wait for it to go green. There is no push trigger: publishing an image is a
+step towards production, so it is always a deliberate action. Then, on the server:
 
 ```bash
 docker compose -f docker-compose.prod.yml pull

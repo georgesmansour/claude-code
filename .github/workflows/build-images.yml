@@ -12,17 +12,16 @@
 
 name: Build images
 
+# MANUAL ONLY, and only from the deployment branch.
+#
+# There is deliberately no push trigger. Publishing an image is a step towards production, and
+# main is being kept clean until the deployment is proven — so a merge to main must never
+# quietly build or ship anything. Run this from the Actions tab, selecting
+# feat/docker-deployment as the branch.
 on:
-  push:
-    branches: [feat/docker-deployment, main]
-    # Documentation-only changes should not spend build minutes or publish a new image.
-    paths-ignore:
-      - "**/*.md"
-      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
-# A second push while the first is still building would race to the same tags. Let the newer
-# commit win rather than publishing them in arbitrary order.
+# Two runs against the same branch would race to the same tags. Let the newer one win.
 concurrency:
   group: build-images-${{ github.ref }}
   cancel-in-progress: true
@@ -37,6 +36,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Refuse to build from main
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "::error::Builds run from feat/docker-deployment, not main. Re-run and pick that branch."
+          exit 1
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-dotnet@v4
@@ -45,7 +50,6 @@ jobs:
 
       - name: Run tests
         run: dotnet test backend/InvitationPlatform.sln --configuration Release --nologo
-
   # ── Build and publish ──────────────────────────────────────────────────────
   build:
     needs: test
