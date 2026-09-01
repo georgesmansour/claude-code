@@ -1,0 +1,122 @@
+# Build the api and web images and publish them to GitHub Container Registry.
+#
+# WHY THIS EXISTS — it is a hosting-cost decision, not a CI habit.
+#
+# Compiling on the server is what forces a large instance: the .NET SDK build wants ~2 GB of
+# RAM and leaves ~3.5 GB of images and build cache behind. The application itself runs in
+# ~190 MB. Building here instead means the server only downloads a finished image, so a small
+# 2 GB VPS is enough to host it.
+#
+# It also makes deployments fast (pull, not compile) and repeatable: the exact bytes tested
+# here are the bytes that run in production.
+
+name: Build images
+
+# MANUAL ONLY, and only from the deployment branch.
+#
+# There is deliberately no push trigger. Publishing an image is a step towards production, and
+# main is being kept clean until the deployment is proven — so a merge to main must never
+# quietly build or ship anything. Run this from the Actions tab, selecting
+# feat/docker-deployment as the branch.
+on:
+  workflow_dispatch:
+
+# Two runs against the same branch would race to the same tags. Let the newer one win.
+concurrency:
+  group: build-images-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # ── Gate ───────────────────────────────────────────────────────────────────
+  # Publishing an image that fails its own tests just moves the failure to production, where
+  # migrations have already run. Cheap insurance: the suite takes about a minute.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse to build from main
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "::error::Builds run from feat/docker-deployment, not main. Re-run and pick that branch."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run tests
+        run: dotnet test backend/InvitationPlatform.sln --configuration Release --nologo
+  # ── Build and publish ──────────────────────────────────────────────────────
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write        # required to push to GHCR
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            context: ./backend
+          - name: web
+            context: ./frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          # Provided automatically by Actions — no secret to create or rotate.
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Work out tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # Lower-cased automatically; GHCR rejects capitals in a repository name.
+          images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=sha,format=long
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Cache layers so later builds reuse the NuGet restore layer instead of
+          # re-downloading every package.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # The deployment target is an x86-64 VPS. Add linux/arm64 only if that changes —
+          # cross-building .NET under emulation is slow, so prefer a native ARM runner.
+          platforms: linux/amd64
+
+      - name: Summary
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          NAME: ${{ matrix.name }}
+        run: |
+          {
+            echo "### \`${NAME}\` image published"
+            echo ''
+            echo 'Pull with:'
+            echo '```'
+            echo "${TAGS}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
