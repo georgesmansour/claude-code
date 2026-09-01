@@ -4,8 +4,8 @@
 #
 # Compiling on the server is what forces a large instance: the .NET SDK build wants ~2 GB of
 # RAM and leaves ~3.5 GB of images and build cache behind. The application itself runs in
-# ~190 MB. Building here instead means the server only ever downloads a finished image, so a
-# small, cheap instance is enough for it.
+# ~190 MB. Building here instead means the server only downloads a finished image, so a small
+# 2 GB VPS is enough to host it.
 #
 # It also makes deployments fast (pull, not compile) and repeatable: the exact bytes tested
 # here are the bytes that run in production.
@@ -21,11 +21,34 @@ on:
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
+# A second push while the first is still building would race to the same tags. Let the newer
+# commit win rather than publishing them in arbitrary order.
+concurrency:
+  group: build-images-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
 
 jobs:
+  # ── Gate ───────────────────────────────────────────────────────────────────
+  # Publishing an image that fails its own tests just moves the failure to production, where
+  # migrations have already run. Cheap insurance: the suite takes about a minute.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run tests
+        run: dotnet test backend/InvitationPlatform.sln --configuration Release --nologo
+
+  # ── Build and publish ──────────────────────────────────────────────────────
   build:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,18 +95,24 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Cache layers in the registry so later builds reuse the NuGet restore layer
-          # instead of re-downloading every package.
+          # Cache layers so later builds reuse the NuGet restore layer instead of
+          # re-downloading every package.
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # linux/amd64 only, matching the x86-64 servers this deploys to. Add
-          # linux/arm64 here if the target ever becomes an ARM instance — but note that
+          # The deployment target is an x86-64 VPS. Add linux/arm64 only if that changes —
           # cross-building .NET under emulation is slow, so prefer a native ARM runner.
           platforms: linux/amd64
 
       - name: Summary
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          NAME: ${{ matrix.name }}
         run: |
-          echo "### ${{ matrix.name }} image published" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### \`${NAME}\` image published"
+            echo ''
+            echo 'Pull with:'
+            echo '```'
+            echo "${TAGS}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
