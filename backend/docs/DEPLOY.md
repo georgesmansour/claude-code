@@ -22,8 +22,38 @@ Target: a single Linux server running four containers via `docker-compose.prod.y
 Only `caddy` publishes ports. The API and the database are reachable exclusively on the private
 compose network — there is no port to attack.
 
-These instructions use **Oracle Cloud Always Free** (ARM, $0/month). Every file works unchanged
-on any Docker host, so the fallback to a small VPS is a provider swap, not a rewrite.
+## Sizing, and why the server is small
+
+Measured on the running stack: **the whole application idles at ~190 MB.**
+
+| Container | Idle RAM |
+|-----------|----------|
+| api | 90 MB |
+| db | 54 MB |
+| web | 14 MB |
+| caddy | ~30 MB |
+
+Compiling is the only heavy step — the .NET SDK build wants ~2 GB of RAM and leaves ~3.5 GB of
+images and build cache behind. So **the server does not compile.** `build-images.yml` builds
+in GitHub Actions and publishes to GHCR; the server pulls finished images. That removes the
+SDK, the build cache and the memory spike from the machine you pay for.
+
+What is actually needed:
+
+| | Minimum | Comfortable |
+|---|---|---|
+| vCPU | 1 | 2 |
+| RAM | 1 GB + swap | **2 GB** |
+| Disk | 20 GB | 40 GB |
+
+2 GB / 1 vCPU / 50 GB is the sweet spot on most providers. Add the swap file from §2.5
+regardless — it costs nothing and turns a memory spike into a slowdown instead of an
+OOM kill.
+
+Disk grows with **uploaded media**, not the database: the entire dataset dumps to well under a
+megabyte, while images cap at 8 MB and video at 15 MB each.
+
+Every file works unchanged on any Docker host, so switching provider is a swap, not a rewrite.
 
 ---
 
@@ -64,67 +94,166 @@ server is answering — which counts against a rate limit you cannot reset.
 
 ---
 
-## Part 2 — Create the server
+## Part 2 — Create and harden the server
 
-### 2.1 Provision an Always Free ARM instance
+Target here is a **RackNerd KVM VPS running Ubuntu 24.04** with 2 GB RAM. A budget VPS is not a
+managed cloud, and three differences matter before anything is installed.
 
-In the Oracle Cloud console: **Compute → Instances → Create instance**.
+### 2.1 Confirm the machine can run Docker
 
-- **Shape:** `VM.Standard.A1.Flex` — this is the Always Free ARM shape. The free allowance is
-  4 OCPUs and 24 GB RAM total; 2 OCPU / 12 GB is more than enough here and leaves headroom
-  for a second instance.
-- **Image:** Ubuntu 24.04 (aarch64)
-- **Boot volume:** 50 GB is plenty (the free allowance is 200 GB total)
-- **SSH key:** upload your public key — you cannot log in without it
-
-> **Expect "Out of host capacity."** Free ARM capacity is heavily contested. Retry, try a
-> different availability domain, or pick a less busy home region. This is the single most
-> common reason people give up on Oracle's free tier — it is not a mistake on your part.
-
-Nothing in this stack is architecture-specific: .NET 10, nginx-alpine, postgres-alpine and
-caddy all publish `arm64` images, and building on the server compiles natively.
-
-### 2.2 Open ports 80 and 443 — *both* places
-
-This is where nearly everyone gets stuck. Oracle blocks traffic at **two independent layers**,
-and opening only one leaves the site unreachable with no error message.
-
-**Layer 1 — the virtual cloud network.** Networking → Virtual Cloud Networks → your VCN →
-Security Lists → default list → **Add Ingress Rules**:
-
-| Source CIDR | Protocol | Destination port |
-|-------------|----------|------------------|
-| `0.0.0.0/0` | TCP | 80 |
-| `0.0.0.0/0` | TCP | 443 |
-
-**Layer 2 — iptables on the instance itself.** Oracle's Ubuntu images ship with a restrictive
-`iptables` ruleset that drops everything except SSH. SSH in and run:
+RackNerd sells both KVM and container-based plans. Docker needs **KVM** — on OpenVZ or LXC it
+has no proper cgroups or overlay filesystem and fails in confusing ways.
 
 ```bash
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+systemd-detect-virt
+```
+
+Must print `kvm`. If it prints `openvz` or `lxc`, stop and open a ticket to move to a KVM plan;
+nothing below will work reliably otherwise.
+
+```bash
+nproc && free -h && df -h /
+```
+
+### 2.2 Password login is enabled right now
+
+RackNerd emails a root password rather than provisioning an SSH key, so the machine is
+accepting password logins from the whole internet, and automated brute-forcing begins within
+hours of an IP going live. This section is time-sensitive.
+
+**Create a non-root user.** Working as root means every mistake and every compromised process
+has total control.
+
+```bash
+adduser georges
+usermod -aG sudo georges
+```
+
+**Install your public key.** Generate one on your PC first if you have none
+(`ssh-keygen -t ed25519`), then paste the `.pub` contents into the file below:
+
+```bash
+mkdir -p /home/georges/.ssh && nano /home/georges/.ssh/authorized_keys
+chmod 700 /home/georges/.ssh && chmod 600 /home/georges/.ssh/authorized_keys
+chown -R georges:georges /home/georges/.ssh
+```
+
+**Test it in a second terminal, keeping the root session open.** After the next step a broken
+key means recovery only through RackNerd's VNC console.
+
+```bash
+ssh georges@YOUR_SERVER_IP
+sudo whoami
+```
+
+**Then disable root login and passwords** — the single highest-value change here:
+
+```bash
+sudo nano /etc/ssh/sshd_config
+```
+
+```
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+MaxAuthTries 3
 ```
 
 ```bash
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+sudo systemctl restart ssh
+sudo sshd -T | grep -E "permitrootlogin|passwordauthentication"
 ```
 
+Both must read `no`. Ubuntu 24.04 reads drop-in files from `/etc/ssh/sshd_config.d/`, and
+provider images sometimes ship one that re-enables passwords and silently overrides the main
+file — so verify the *effective* configuration rather than trusting what you typed.
+
+### 2.3 Firewall — this is your only one
+
+Unlike a managed cloud, there is no provider-level firewall in front of the machine. `ufw` on
+the server is the entire perimeter.
+
 ```bash
-sudo netfilter-persistent save
+sudo apt install -y ufw
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status verbose
 ```
 
 Do **not** open 5432. The database has no published port and must stay that way.
 
-### 2.3 Install Docker
+> **Docker bypasses ufw.** Docker inserts its own iptables rules *ahead* of ufw's, so a
+> container published with `ports:` is reachable from the internet even when ufw says that
+> port is denied. With no cloud firewall behind it, there is no second net.
+>
+> This stack is safe by design — only Caddy publishes, on 80 and 443. But if you ever uncomment
+> the database port mapping, write it as `127.0.0.1:5432:5432`. That loopback prefix is what
+> stops Docker exposing it publicly.
+
+### 2.4 fail2ban and automatic security updates
+
+fail2ban matters more here than on a managed host, because the IP has already been advertising
+password authentication.
 
 ```bash
-curl -fsSL https://get.docker.com | sudo sh
+sudo apt install -y fail2ban unattended-upgrades
+sudo systemctl enable --now fail2ban
+sudo dpkg-reconfigure --priority=low unattended-upgrades
 ```
 
+### 2.5 Swap
+
+With 2 GB of RAM there is little headroom, and Linux kills the largest process rather than
+slowing down when memory runs out. Swap turns that cliff into a gentle degradation. Skip if
+`free -h` already shows some.
+
 ```bash
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+free -h
+```
+
+### 2.6 Timezone
+
+So log timestamps mean something when you are debugging under pressure.
+
+```bash
+sudo timedatectl set-timezone Asia/Beirut
+```
+
+### 2.7 Install git and Docker
+
+```bash
+sudo apt install -y git
+curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER && newgrp docker
 ```
 
-Verify with `docker compose version` — modern Docker bundles Compose v2, no separate install.
+```bash
+docker compose version && docker run --rm hello-world
+```
+
+Ensure Docker starts on boot, so a reboot brings the site back without you:
+
+```bash
+sudo systemctl enable docker
+```
+
+### 2.8 Log in to the image registry
+
+The server pulls pre-built images rather than compiling — this is what keeps 2 GB sufficient.
+If the repository is **public**, GHCR allows anonymous pulls and you can skip this. If it is
+**private**, authenticate once with a GitHub token carrying the `read:packages` scope:
+
+```bash
+echo "YOUR_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+```
+
+The credential is stored in `~/.docker/config.json` and survives reboots.
 
 ---
 
@@ -132,8 +261,22 @@ Verify with `docker compose version` — modern Docker bundles Compose v2, no se
 
 ### 3.1 Clone and configure
 
+Clone the deployment branch — not the default branch, which does not yet contain this stack:
+
 ```bash
-git clone https://github.com/georgesmansour/claude-code.git app && cd app
+git clone -b feat/docker-deployment https://github.com/georgesmansour/claude-code.git app && cd app
+```
+
+If the repository is private, HTTPS will ask for credentials that a server cannot supply.
+Generate a key on the server, add the **public** half to the repository under
+Settings → Deploy keys (read-only is enough), and clone over SSH instead:
+
+```bash
+ssh-keygen -t ed25519 -C "digital-invite-server" -f ~/.ssh/id_ed25519 -N "" && cat ~/.ssh/id_ed25519.pub
+```
+
+```bash
+git clone -b feat/docker-deployment git@github.com:georgesmansour/claude-code.git app && cd app
 ```
 
 ```bash
@@ -149,12 +292,24 @@ Leave `SITE_ADDRESS=:80` for now.
 
 ### 3.2 Start it
 
+Push to `feat/docker-deployment` or `main` first, or run the **Build images** workflow by hand,
+so the images exist in GHCR. Then, on the server:
+
 ```bash
-docker compose -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.prod.yml pull
 ```
 
-The first build takes several minutes — it pulls the .NET SDK image and compiles from source.
-Subsequent builds reuse cached layers.
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+This downloads roughly 500 MB of finished images and starts them — no compiler, no SDK, no
+build cache. It takes about a minute.
+
+> **Fallback if the registry is unavailable** — or if you deliberately want to build on the
+> machine — `docker compose -f docker-compose.prod.yml up --build -d` still works, because the
+> services declare both `image` and `build`. It needs ~2 GB of free RAM, so use the swap file
+> from §2.5 on a small instance.
 
 ```bash
 docker compose -f docker-compose.prod.yml ps
@@ -238,7 +393,7 @@ you cannot quickly fix.
 ### 4.1 Back up the database
 
 Nothing is backed up by default. The `db_data` volume lives on one disk on one machine — and
-on Oracle's free tier, on an instance the provider may reclaim.
+on a budget VPS with no managed snapshots, this is your only copy.
 
 ```bash
 docker compose -f docker-compose.prod.yml exec -T db \
@@ -303,12 +458,12 @@ server's database. Close the SSH session and the route disappears.
 > Skipping the binding and opening only the tunnel does not work: the tunnel forwards to the
 > server's `localhost:5432`, where nothing is listening until the port is bound.
 
-**Never** open 5432 in the Oracle security list or in iptables.
+**Never** open 5432 in `ufw`, and never publish it without the `127.0.0.1:` prefix.
 
 ### 4.4 Deploy an update
 
 ```bash
-git pull && docker compose -f docker-compose.prod.yml up --build -d
+git pull && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
 ```
 
 Migrations run automatically on boot. Take a database backup first — this project has no
@@ -339,9 +494,9 @@ enabling forwarded headers without that restriction lets any caller spoof the re
 
 ## Troubleshooting
 
-**Site unreachable, containers all healthy.** One of the two Oracle firewall layers. Verify the
-VCN ingress rules exist *and* that `sudo iptables -L INPUT -n --line-numbers` shows your ACCEPT
-rules for 80/443 above the REJECT rule.
+**Site unreachable, containers all healthy.** Almost always `ufw`. Confirm with `sudo ufw status
+verbose` that 80 and 443 are allowed, and that the containers are actually listening with
+`docker compose -f docker-compose.prod.yml ps`.
 
 **Caddy cannot get a certificate.** DNS is not resolving to this server yet, or port 80 is not
 reachable from the internet — Let's Encrypt validates over HTTP. Confirm with

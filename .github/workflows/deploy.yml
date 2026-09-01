@@ -1,0 +1,148 @@
+# Deploy to the production server.
+#
+# Triggered by hand from the Actions tab — there is deliberately no push trigger. A deployment
+# runs migrations against the live database and this project has no down-migration path, so
+# every deploy should be a decision someone made, not a side effect of merging.
+#
+# The server does NOT compile anything. Images are built by build-images.yml and published to
+# GHCR; this workflow tells the server to pull them and restart. That is a hosting-cost
+# decision: compiling on the server needs ~2 GB of RAM and ~3.5 GB of disk for the SDK and
+# build cache, while the running application needs ~190 MB. Pulling finished images is what
+# makes a small instance sufficient.
+#
+# Deploys are also seconds rather than minutes, and the bytes that ran in CI are the bytes
+# that run in production.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#
+#   DEPLOY_HOST         the server's IP or hostname
+#   DEPLOY_USER         the SSH user (e.g. ubuntu)
+#   DEPLOY_SSH_KEY      private half of a key whose public half is in the server's
+#                       ~/.ssh/authorized_keys. Generate a DEDICATED key for this — never
+#                       reuse your personal one, since anyone able to edit this workflow
+#                       could otherwise use it.
+#   DEPLOY_KNOWN_HOSTS  output of: ssh-keyscan <host>
+#                       Pinning it means a machine-in-the-middle cannot impersonate the
+#                       server. Trusting whatever answers would defeat the SSH key entirely.
+
+name: Deploy to production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag or commit to deploy"
+        required: true
+        default: feat/docker-deployment
+      backup_first:
+        description: "Back up the database before deploying"
+        type: boolean
+        default: true
+
+# Never let two deployments overlap — the second would rebuild containers underneath the first.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Attach a GitHub Environment named "production" to require manual approval before this job
+    # runs, and to scope the secrets to it. Configure under Settings → Environments.
+    environment: production
+
+    steps:
+      - name: Set up SSH
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          DEPLOY_REF: ${{ inputs.ref }}
+          BACKUP_FIRST: ${{ inputs.backup_first }}
+        run: |
+          set -euo pipefail
+
+          # The ref reaches the remote inside a quoted string, so reject anything that is not a
+          # plain git ref before it can be read as shell.
+          case "$DEPLOY_REF" in
+            ''|*[!A-Za-z0-9._/-]*)
+              echo "Refusing unsafe ref: $DEPLOY_REF" >&2; exit 1 ;;
+          esac
+
+          ssh -o StrictHostKeyChecking=yes \
+              "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+              "DEPLOY_REF='$DEPLOY_REF' BACKUP_FIRST='$BACKUP_FIRST' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd ~/app
+
+          COMPOSE="docker compose -f docker-compose.prod.yml"
+
+          # ── Back up before anything can change the schema ──────────────────
+          # Migrations run on boot and cannot be rolled back, so the backup must exist before
+          # the new containers start, not after.
+          if [ "${BACKUP_FIRST}" = "true" ]; then
+            mkdir -p ~/backups
+            STAMP=$(date +%F-%H%M%S)
+            echo "-> backing up to ~/backups/pre-deploy-${STAMP}.sql.gz"
+            # POSTGRES_USER and POSTGRES_DB are already set inside the db container by compose,
+            # so read them there rather than guessing them out here.
+            $COMPOSE exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+              | gzip > ~/backups/"pre-deploy-${STAMP}.sql.gz"
+            # Keep the newest 10 so a small boot volume cannot fill up silently.
+            ls -1t ~/backups/pre-deploy-*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm --
+          fi
+
+          # ── Fetch the requested revision ───────────────────────────────────
+          echo "-> deploying ${DEPLOY_REF}"
+          git fetch --all --prune --tags
+          git checkout --force "${DEPLOY_REF}"
+          # Fast-forward only when a branch is checked out. A tag or SHA leaves HEAD detached,
+          # where there is nothing to pull — and an "&&" here would abort the script.
+          if git symbolic-ref -q HEAD >/dev/null; then
+            git pull --ff-only
+          fi
+          echo "-> now at $(git rev-parse --short HEAD): $(git log -1 --pretty=%s)"
+
+          # ── Pull the pre-built images and restart ─────────────────────────
+          # No --build: the server never compiles. API_IMAGE and WEB_IMAGE in .env point at
+          # the GHCR tags published by build-images.yml.
+          $COMPOSE pull
+          $COMPOSE up -d --remove-orphans
+
+          # ── Wait for the API to report healthy ────────────────────────────
+          # Migrations and seeding run before it listens, so this is the real readiness signal.
+          echo "-> waiting for the api container to become healthy"
+          for i in $(seq 1 40); do
+            STATE=$(docker inspect -f '{{.State.Health.Status}}' invitation-prod-api 2>/dev/null || echo missing)
+            if [ "$STATE" = "healthy" ]; then
+              echo "-> healthy after $((i * 5))s"
+              break
+            fi
+            if [ "$i" -eq 40 ]; then
+              echo "!! api never became healthy (last state: ${STATE}). Recent logs:"
+              $COMPOSE logs --tail 40 api
+              exit 1
+            fi
+            sleep 5
+          done
+
+          $COMPOSE ps
+          docker image prune -f >/dev/null 2>&1 || true
+          REMOTE
+
+      - name: Smoke-test the public site
+        run: |
+          set -euo pipefail
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://digital-invite.net/ || echo 000)
+          echo "https://digital-invite.net/ -> ${CODE}"
+          # The deploy already passed its own health gate, so a non-200 here is reported rather
+          # than failed: it is expected while the site is still running on the bare IP.
+          if [ "${CODE}" != "200" ]; then
+            echo "::warning::Public site returned ${CODE}. Expected while still on the bare IP."
+          fi

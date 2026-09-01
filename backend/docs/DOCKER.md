@@ -30,7 +30,7 @@ them. All three can be running at once.
 
 | | Visual Studio (F5) | Local containers | Production |
 |---|---|---|---|
-| **Started by** | F5 / `dotnet run` | `docker compose up --build -d` | `docker compose -f docker-compose.prod.yml up --build -d` |
+| **Started by** | F5 / `dotnet run` | `docker compose up --build -d` | `docker compose -f docker-compose.prod.yml pull && up -d` |
 | **ASPNETCORE_ENVIRONMENT** | `Development` | `Production` | `Production` |
 | **Config comes from** | `appsettings.json` + `appsettings.Development.json` | `.env` + `docker-compose.yml` | `.env` on the server + `docker-compose.prod.yml` |
 | **Secrets file** | `appsettings.Development.json` *(gitignored)* | `.env` *(gitignored)* | `.env` on the server, from `.env.prod.example` |
@@ -217,7 +217,7 @@ docker compose ps
 **5 — Deploy.** On the server, per `DEPLOY.md`:
 
 ```bash
-git pull && docker compose -f docker-compose.prod.yml up --build -d
+git pull && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
 ```
 
 Take a database backup first — this project has no down-migration path.
