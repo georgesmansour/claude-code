@@ -297,12 +297,12 @@ access. Nobody without that token can pull your images.
 
 ### 3.1 Clone and configure
 
-Clone over **SSH**, using the deploy key from §2.8 — HTTPS would prompt for credentials the
-server cannot supply. Clone the deployment branch, not the default branch, which does not yet
-contain this stack:
+Clone over **SSH** using the deploy key from §2.8 — HTTPS would prompt for credentials the
+server cannot supply.
+
 
 ```bash
-git clone -b feat/docker-deployment git@github.com:georgesmansour/claude-code.git app && cd app
+git clone git@github.com:georgesmansour/claude-code.git app && cd app
 ```
 
 ```bash
@@ -319,8 +319,8 @@ Leave `SITE_ADDRESS=:80` for now.
 
 ### 3.2 Start it
 
-Run the **Build images** workflow from the Actions tab, selecting `feat/docker-deployment` as
-the branch, and wait for it to go green. There is no push trigger: publishing an image is a
+Run the **Build images** workflow from the Actions tab on `main`, and wait for it to go green.
+There is no push trigger: publishing an image is a
 step towards production, so it is always a deliberate action. Then, on the server:
 
 ```bash
