@@ -243,37 +243,63 @@ Ensure Docker starts on boot, so a reboot brings the site back without you:
 sudo systemctl enable docker
 ```
 
-### 2.8 Log in to the image registry
+### 2.8 Give the server read access to the private repository
 
-The server pulls pre-built images rather than compiling — this is what keeps 2 GB sufficient.
-If the repository is **public**, GHCR allows anonymous pulls and you can skip this. If it is
-**private**, authenticate once with a GitHub token carrying the `read:packages` scope:
+The repository is private, so the server needs two credentials — and they are separate things
+solving separate problems. Neither grants write access to anything.
+
+**A deploy key, so it can clone the code.** Generated on the server; only the public half
+leaves it. A deploy key is scoped to this one repository, unlike a personal SSH key which would
+grant access to everything you own.
 
 ```bash
-echo "YOUR_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+ssh-keygen -t ed25519 -C "digital-invite-server" -f ~/.ssh/id_ed25519 -N ""
+cat ~/.ssh/id_ed25519.pub
 ```
 
-The credential is stored in `~/.docker/config.json` and survives reboots.
+Copy that line into GitHub → the repository → **Settings → Deploy keys → Add deploy key**.
+Leave "Allow write access" **unchecked**. Then confirm it works:
+
+```bash
+ssh -T git@github.com
+```
+
+Expect `Hi georgesmansour/claude-code! You've successfully authenticated, but GitHub does not
+provide shell access.` — that is success, not an error.
+
+**A token, so it can pull images from GHCR.** Deploy keys do not work for the container
+registry; it authenticates over HTTPS. Create a **classic** personal access token at
+github.com/settings/tokens with **only** the `read:packages` scope ticked — no `repo`, no
+write. Then, on the server:
+
+```bash
+echo "ghp_YOUR_TOKEN_HERE" | docker login ghcr.io -u georgesmansour --password-stdin
+```
+
+The credential is stored base64-encoded in `~/.docker/config.json` and survives reboots, so
+this is a one-time step. Lock the file down, since it is a credential at rest:
+
+```bash
+chmod 600 ~/.docker/config.json
+```
+
+> **Use a classic token, not a fine-grained one.** Fine-grained token support for GHCR has been
+> inconsistent; a classic token limited to `read:packages` is the reliably working path and is
+> no broader in what it can do.
+
+Because the repository is private, the published packages are private too and inherit its
+access. Nobody without that token can pull your images.
 
 ---
+
 
 ## Part 3 — Deploy
 
 ### 3.1 Clone and configure
 
-Clone the deployment branch — not the default branch, which does not yet contain this stack:
-
-```bash
-git clone -b feat/docker-deployment https://github.com/georgesmansour/claude-code.git app && cd app
-```
-
-If the repository is private, HTTPS will ask for credentials that a server cannot supply.
-Generate a key on the server, add the **public** half to the repository under
-Settings → Deploy keys (read-only is enough), and clone over SSH instead:
-
-```bash
-ssh-keygen -t ed25519 -C "digital-invite-server" -f ~/.ssh/id_ed25519 -N "" && cat ~/.ssh/id_ed25519.pub
-```
+Clone over **SSH**, using the deploy key from §2.8 — HTTPS would prompt for credentials the
+server cannot supply. Clone the deployment branch, not the default branch, which does not yet
+contain this stack:
 
 ```bash
 git clone -b feat/docker-deployment git@github.com:georgesmansour/claude-code.git app && cd app
@@ -282,6 +308,7 @@ git clone -b feat/docker-deployment git@github.com:georgesmansour/claude-code.gi
 ```bash
 cp .env.prod.example .env && nano .env
 ```
+
 
 Fill in every value. The three that must agree with each other: `POSTGRES_USER`,
 `POSTGRES_PASSWORD`, and the matching `Username=` / `Password=` inside
