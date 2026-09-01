@@ -21,10 +21,35 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("DefaultConnection is not configured.");
 
+// Opens the first connection, retrying while the database refuses it. This runs before the
+// host is built, so an unhandled failure here kills the process outright — which is exactly
+// what happens in Docker, where containers start in parallel, and against a serverless
+// database that has auto-suspended and needs a moment to wake.
+static async Task<NpgsqlConnection> OpenWithRetryAsync(string connectionString, int attempts = 10)
+{
+    for (var attempt = 1; ; attempt++)
+    {
+        var conn = new NpgsqlConnection(connectionString);
+        try
+        {
+            await conn.OpenAsync();
+            return conn;
+        }
+        catch (Exception ex) when (attempt < attempts)
+        {
+            await conn.DisposeAsync();
+            var delay = TimeSpan.FromSeconds(Math.Min(attempt * 2, 10));
+            Console.WriteLine(
+                $"WARN  Database not reachable (attempt {attempt}/{attempts}): {ex.Message} " +
+                $"Retrying in {delay.TotalSeconds:0}s.");
+            await Task.Delay(delay);
+        }
+    }
+}
+
 string jwtKey;
 {
-    await using var conn = new NpgsqlConnection(connectionString);
-    await conn.OpenAsync();
+    await using var conn = await OpenWithRetryAsync(connectionString);
 
     await using var setup = conn.CreateCommand();
     setup.CommandText = """
@@ -59,7 +84,17 @@ string jwtKey;
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(
         connectionString,
-        npg => npg.MigrationsAssembly("InvitationPlatform.Infrastructure")));
+        npg =>
+        {
+            npg.MigrationsAssembly("InvitationPlatform.Infrastructure");
+            // Retry transient failures instead of returning a 500. Pooled connections die
+            // whenever the database restarts — which happens on every deployment that
+            // recreates the db container, and whenever a serverless database auto-suspends.
+            // Safe here because nothing in the codebase opens an explicit transaction; those
+            // would have to be wrapped in the execution strategy by hand.
+            npg.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(5),
+                                     errorCodesToAdd: null);
+        }));
 
 // ── Auth ─────────────────────────────────────────────────────────────
 var jwtSettings = new JwtSettings
@@ -115,10 +150,22 @@ builder.Services.Configure<SuperAdminSettings>(builder.Configuration.GetSection(
 builder.Services.AddScoped<DatabaseSeeder>();
 
 // ── CORS ─────────────────────────────────────────────────────────────
-builder.Services.AddCors(o => o.AddPolicy("Frontend", p => p
-    .SetIsOriginAllowed(_ => true)         // simplest for dev; tighten for prod
-    .AllowAnyHeader()
-    .AllowAnyMethod()));
+// In every supported setup the pages and the API share an origin — nginx proxies /api/* in
+// the container stack, and the API serves the pages itself under "dotnet run" — so production
+// needs no cross-origin grant at all, and gets none. Same-origin requests are unaffected by
+// an empty policy; only a genuinely cross-origin caller would be refused.
+//
+// Cors:AllowedOrigins exists for the one case that would need it: hosting the frontend on a
+// separate domain. Development keeps the old allow-anything behaviour so a page opened from
+// a different dev server still works.
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(o => o.AddPolicy("Frontend", p =>
+{
+    if (corsOrigins.Length > 0)
+        p.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod();
+    else if (builder.Environment.IsDevelopment())
+        p.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod();
+}));
 
 var app = builder.Build();
 
@@ -156,7 +203,7 @@ if (app.Environment.IsDevelopment())
             .AddRewrite(@"^(?!health$)([A-Za-z0-9-]+)$", "$1.html", skipRemainingRules: true));
 
         // Serve the landing page at "/" (and index.html inside any template folder), matching
-        // what static hosts like Netlify do by default. Must run before UseStaticFiles.
+        // what the nginx web container does in the container stack. Must run before UseStaticFiles.
         app.UseDefaultFiles(new DefaultFilesOptions
         {
             FileProvider = new PhysicalFileProvider(frontendDir),

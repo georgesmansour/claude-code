@@ -1,0 +1,11 @@
+# Local environment — real credentials for the container stack. Never commit.
+.env
+.env.local
+.env.*.local
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+
+# Database dumps — real data, never commit
+backend/db/backups/

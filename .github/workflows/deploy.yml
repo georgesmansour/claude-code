@@ -33,7 +33,7 @@ on:
       ref:
         description: "Branch, tag or commit to deploy"
         required: true
-        default: feat/docker-deployment
+        default: main
       backup_first:
         description: "Back up the database before deploying"
         type: boolean

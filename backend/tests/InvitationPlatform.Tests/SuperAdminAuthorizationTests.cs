@@ -18,10 +18,10 @@ public class SuperAdminAuthorizationTests
     public async Task Super_admin_login_issues_SuperAdmin_role()
     {
         using var db = TestSupport.NewDb();
-        TestSupport.SeedAdmin(db, "cgteam.ai@outlook.com", "admin_123", isSuperAdmin: true);
+        TestSupport.SeedAdmin(db, "superadmin@test.local", "test-password-123", isSuperAdmin: true);
         var ctrl = TestSupport.NewAuthController(db);
 
-        var result = await ctrl.AdminLogin(new LoginRequest("cgteam.ai@outlook.com", "admin_123"));
+        var result = await ctrl.AdminLogin(new LoginRequest("superadmin@test.local", "test-password-123"));
 
         var body = TestSupport.Body<LoginResponse>(result);
         Assert.Equal("SuperAdmin", body.Role);
@@ -53,10 +53,10 @@ public class SuperAdminAuthorizationTests
     public async Task Login_with_wrong_password_is_unauthorized()
     {
         using var db = TestSupport.NewDb();
-        TestSupport.SeedAdmin(db, "cgteam.ai@outlook.com", "admin_123", isSuperAdmin: true);
+        TestSupport.SeedAdmin(db, "superadmin@test.local", "test-password-123", isSuperAdmin: true);
         var ctrl = TestSupport.NewAuthController(db);
 
-        var result = await ctrl.AdminLogin(new LoginRequest("cgteam.ai@outlook.com", "wrong-password"));
+        var result = await ctrl.AdminLogin(new LoginRequest("superadmin@test.local", "wrong-password"));
 
         Assert.IsType<UnauthorizedObjectResult>(result);
     }
@@ -65,10 +65,10 @@ public class SuperAdminAuthorizationTests
     public async Task Inactive_super_admin_cannot_log_in()
     {
         using var db = TestSupport.NewDb();
-        TestSupport.SeedAdmin(db, "cgteam.ai@outlook.com", "admin_123", isSuperAdmin: true, isActive: false);
+        TestSupport.SeedAdmin(db, "superadmin@test.local", "test-password-123", isSuperAdmin: true, isActive: false);
         var ctrl = TestSupport.NewAuthController(db);
 
-        var result = await ctrl.AdminLogin(new LoginRequest("cgteam.ai@outlook.com", "admin_123"));
+        var result = await ctrl.AdminLogin(new LoginRequest("superadmin@test.local", "test-password-123"));
 
         Assert.IsType<UnauthorizedObjectResult>(result);
     }
@@ -77,11 +77,11 @@ public class SuperAdminAuthorizationTests
     public async Task Password_is_hashed_not_stored_in_plaintext()
     {
         using var db = TestSupport.NewDb();
-        var admin = TestSupport.SeedAdmin(db, "cgteam.ai@outlook.com", "admin_123", isSuperAdmin: true);
+        var admin = TestSupport.SeedAdmin(db, "superadmin@test.local", "test-password-123", isSuperAdmin: true);
 
-        Assert.NotEqual("admin_123", admin.PasswordHash);
+        Assert.NotEqual("test-password-123", admin.PasswordHash);
         Assert.StartsWith("$2", admin.PasswordHash);          // BCrypt hash marker
-        Assert.True(BCrypt.Net.BCrypt.Verify("admin_123", admin.PasswordHash));
+        Assert.True(BCrypt.Net.BCrypt.Verify("test-password-123", admin.PasswordHash));
     }
 
     [Fact]

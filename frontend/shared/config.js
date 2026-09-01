@@ -1,12 +1,17 @@
 // API base URL — resolved once at page load.
 //
-// • localhost / 127.0.0.1  →  talk directly to the local .NET backend
-// • any other host (Netlify, etc.) →  empty string = same-origin
-//   Netlify proxies /api/* to the real backend via netlify.toml [[redirects]]
+// Same-origin by default, which is correct for both supported ways of running the app:
+//   • containers — nginx serves these pages and proxies /api/* to the API container
+//   • dotnet run — the API serves these pages itself in Development
 //
-// You never need to edit the HTML files.
-// For a new deployment: update the [[redirects]] target in netlify.toml.
-window.API_BASE = (
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1'
-) ? 'http://localhost:5034' : '';
+// Only override when the pages are served from a DIFFERENT origin than the API (e.g. a
+// separate static dev server). Two ways, both without editing any HTML:
+//   1. set window.API_BASE in a <script> before this file loads, or
+//   2. run  localStorage.setItem('apiBase', 'http://localhost:5034')  in the console.
+(function () {
+  var override = (typeof window.API_BASE === 'string' && window.API_BASE) || '';
+  if (!override) {
+    try { override = localStorage.getItem('apiBase') || ''; } catch (e) { /* private mode */ }
+  }
+  window.API_BASE = override.replace(/\/$/, '');
+})();

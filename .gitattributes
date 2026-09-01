@@ -1,0 +1,36 @@
+# Normalise text files to LF in the repository.
+#
+# Without this, a Windows clone with core.autocrlf=true checks these files out with CRLF
+# line endings. That matters for anything a Linux container reads: an .env value ending in
+# a stray carriage return is parsed as part of the value ("587\r"), and shell scripts with
+# CRLF fail with an unhelpful "not found". Forcing eol=lf keeps the container plumbing
+# byte-identical on every machine, whatever the contributor's platform.
+* text=auto
+
+# Container plumbing — must be LF in the working copy, not just in the repository.
+Dockerfile        text eol=lf
+*.dockerignore    text eol=lf
+.dockerignore     text eol=lf
+nginx.conf        text eol=lf
+*.yml             text eol=lf
+*.yaml            text eol=lf
+*.sh              text eol=lf
+.env              text eol=lf
+.env.*            text eol=lf
+*.sql             text eol=lf
+
+# Binary assets — never convert, never diff as text.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.ico    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.mp4    binary
+*.webm   binary
+*.mp3    binary
+*.xlsx   binary
+*.pfx    binary
