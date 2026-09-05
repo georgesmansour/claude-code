@@ -125,24 +125,24 @@ hours of an IP going live. This section is time-sensitive.
 has total control.
 
 ```bash
-adduser georges
-usermod -aG sudo georges
+adduser cgteam
+usermod -aG sudo cgteam
 ```
 
 **Install your public key.** Generate one on your PC first if you have none
 (`ssh-keygen -t ed25519`), then paste the `.pub` contents into the file below:
 
 ```bash
-mkdir -p /home/georges/.ssh && nano /home/georges/.ssh/authorized_keys
-chmod 700 /home/georges/.ssh && chmod 600 /home/georges/.ssh/authorized_keys
-chown -R georges:georges /home/georges/.ssh
+mkdir -p /home/cgteam/.ssh && nano /home/cgteam/.ssh/authorized_keys
+chmod 700 /home/cgteam/.ssh && chmod 600 /home/cgteam/.ssh/authorized_keys
+chown -R cgteam:cgteam /home/cgteam/.ssh
 ```
 
 **Test it in a second terminal, keeping the root session open.** After the next step a broken
 key means recovery only through RackNerd's VNC console.
 
 ```bash
-ssh georges@YOUR_SERVER_IP
+ssh cgteam@YOUR_SERVER_IP
 sudo whoami
 ```
 
@@ -264,7 +264,7 @@ Leave "Allow write access" **unchecked**. Then confirm it works:
 ssh -T git@github.com
 ```
 
-Expect `Hi georgesmansour/claude-code! You've successfully authenticated, but GitHub does not
+Expect `Hi cgteam-ai/digital-invite! You've successfully authenticated, but GitHub does not
 provide shell access.` — that is success, not an error.
 
 **A token, so it can pull images from GHCR.** Deploy keys do not work for the container
@@ -273,7 +273,7 @@ github.com/settings/tokens with **only** the `read:packages` scope ticked — no
 write. Then, on the server:
 
 ```bash
-echo "ghp_YOUR_TOKEN_HERE" | docker login ghcr.io -u georgesmansour --password-stdin
+echo "ghp_YOUR_TOKEN_HERE" | docker login ghcr.io -u cgteam-ai --password-stdin
 ```
 
 The credential is stored base64-encoded in `~/.docker/config.json` and survives reboots, so
@@ -302,7 +302,7 @@ server cannot supply.
 
 
 ```bash
-git clone git@github.com:georgesmansour/claude-code.git app && cd app
+git clone git@github.com:cgteam-ai/digital-invite.git app && cd app
 ```
 
 ```bash
